@@ -20,14 +20,18 @@ public class SceneSlicerWizard : EditorWindow
     private GameObject m_scenePrefab;
     private int selected;
 
+    private GameObject m_borderNode;//用来存放分割线
+    private List<GameObject> m_cellPrefabList = new List<GameObject>();
+
     private void OnGUI()
     {
         scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
-        EditorGUILayout.BeginHorizontal();
         EditorGUILayout.BeginVertical();
         m_scenePrefab = EditorGUILayout.ObjectField("scene prefab", m_scenePrefab, typeof(GameObject), false) as GameObject;
         selected = GUILayout.SelectionGrid(selected, new string[] { "2x2", "4x4", "8x8", "16x16", "32x32", "64x64" }, 6);
-        if (GUILayout.Button("begin slice"))
+        EditorGUILayout.Separator();
+        EditorGUILayout.BeginHorizontal();
+        if (GUILayout.Button("Begin slice"))
         {
             if (m_scenePrefab == null)
             {
@@ -38,6 +42,11 @@ public class SceneSlicerWizard : EditorWindow
                 //var node = GameObject.Instantiate(m_scenePrefab.transform.FindChild("Cacti"));
                 SliceScene(m_scenePrefab, (int)Math.Pow(2, selected + 1));
             }
+        }
+        if (GUILayout.Button("Clean up"))
+        {
+            CleanUpBorder();
+            CleanUpCellPrefab();
         }
         EditorGUILayout.EndHorizontal();
         EditorGUILayout.EndVertical();
@@ -65,6 +74,9 @@ public class SceneSlicerWizard : EditorWindow
             rubbishNode.name = "rubbish";
             rubbishNode.SetActive(false);
 
+            CreateBorder(startPoint, dimension, cellX, cellZ);
+
+            CleanUpCellPrefab();
             for (int i = 0; i < dimension; i++)
             {
                 for (int j = 0; j < dimension; j++)
@@ -74,6 +86,7 @@ public class SceneSlicerWizard : EditorWindow
                     var go = new GameObject();
                     go.name = string.Format("{0}_{1}_{2}", scenePrefab.name, i + 1, j + 1);
                     cellPrefab[i, j] = go;
+                    m_cellPrefabList.Add(go);
                 }
             }
 
@@ -83,7 +96,7 @@ public class SceneSlicerWizard : EditorWindow
                 if (child.gameObject == sceneTerrain.gameObject)
                     continue;
                 var isConstructorNode = false;//是否为结构节点
-                if(child.transform.childCount != 0)
+                if (child.transform.childCount != 0)
                 {
                     isConstructorNode = true;
                     if (child.gameObject.GetComponent<MeshRenderer>() != null
@@ -100,7 +113,7 @@ public class SceneSlicerWizard : EditorWindow
                         break;
                     for (int j = 0; j < dimension; j++)
                     {
-                        if (isConstructorNode)
+                        if (isConstructorNode)//结构节点每个单元格都加上去
                         {
                             var node = GameObject.Instantiate(child);
                             CleanUpNewTran(node, rubbishNode.transform);
@@ -108,7 +121,7 @@ public class SceneSlicerWizard : EditorWindow
                             node.transform.parent = FindCellPrefabParentByTargetTran(child, cellPrefab[i, j].transform);
                         }
                         else
-                        {
+                        {//显示节点需要按照坐标分配
                             var x = child.position.x;
                             var z = child.position.z;
                             if (cellPos[i, j].x < x && x < cellEndPos[i, j].x && cellPos[i, j].y < z && z < cellEndPos[i, j].y)
@@ -130,6 +143,55 @@ public class SceneSlicerWizard : EditorWindow
 
             GameObject.DestroyImmediate(rubbishNode);
         }
+    }
+
+    private void CreateBorder(Vector3 startPoint, int dimension, float cellX, float cellZ)
+    {
+        CleanUpBorder();
+
+        m_borderNode = new GameObject();
+        m_borderNode.name = "border";
+        var totalX = cellX * dimension;
+        var totalZ = cellZ * dimension;
+
+        for (int i = 0; i < dimension; i++)//竖向分割线
+        {
+            var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            cube.transform.parent = m_borderNode.transform;
+            cube.transform.position = new Vector3(startPoint.x + cellX * i, startPoint.y, startPoint.z + totalZ / 2);
+            cube.transform.localScale = new Vector3(1, 1, totalZ);
+        }
+        var cubeX = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        cubeX.transform.parent = m_borderNode.transform;
+        cubeX.transform.position = new Vector3(startPoint.x + totalX, startPoint.y, startPoint.z + totalZ / 2);
+        cubeX.transform.localScale = new Vector3(1, 1, totalZ);
+
+        for (int i = 0; i < dimension; i++)//横向分割线
+        {
+            var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            cube.transform.parent = m_borderNode.transform;
+            cube.transform.position = new Vector3(startPoint.x + totalX / 2, startPoint.y, startPoint.z + cellZ * i);
+            cube.transform.localScale = new Vector3(totalX, 1, 1);
+        }
+        var cubeZ = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        cubeZ.transform.parent = m_borderNode.transform;
+        cubeZ.transform.position = new Vector3(startPoint.x + totalX / 2, startPoint.y, startPoint.z + totalZ);
+        cubeZ.transform.localScale = new Vector3(totalX, 1, 1);
+    }
+
+    private void CleanUpBorder()
+    {
+        if (m_borderNode)
+            GameObject.DestroyImmediate(m_borderNode);
+    }
+
+    private void CleanUpCellPrefab()
+    {
+        foreach (var item in m_cellPrefabList)
+        {
+            GameObject.DestroyImmediate(item);
+        }
+        m_cellPrefabList.Clear();
     }
 
     private void CleanUpNewTran(Transform node, Transform rubbishNode)
