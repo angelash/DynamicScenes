@@ -4,6 +4,7 @@ using System.Collections;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.IO;
 
 public class SceneSlicer
 {
@@ -17,19 +18,34 @@ public class SceneSlicer
 
 public class SceneSlicerWizard : EditorWindow
 {
-    private Vector2 scrollPos;
+    private Vector2 m_scrollPos;
     private GameObject m_scenePrefab;
-    private int selected;
+    /// <summary>
+    /// 检测scenePrefab字段变动
+    /// </summary>
+    private GameObject m_lastScenePrefab;
+    private int m_selected;
+    private string m_filePath;
 
     private GameObject m_borderNode;//用来存放分割线
     private List<GameObject> m_cellPrefabList = new List<GameObject>();
 
     private void OnGUI()
     {
-        scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
+        m_scrollPos = EditorGUILayout.BeginScrollView(m_scrollPos);
         EditorGUILayout.BeginVertical();
         m_scenePrefab = EditorGUILayout.ObjectField("scene prefab", m_scenePrefab, typeof(GameObject), false) as GameObject;
-        selected = GUILayout.SelectionGrid(selected, new string[] { "2x2", "4x4", "8x8", "16x16", "32x32", "64x64" }, 6);
+        if (m_lastScenePrefab != m_scenePrefab)
+        {
+            m_lastScenePrefab = m_scenePrefab;
+            m_filePath = AssetDatabase.GetAssetPath(m_scenePrefab);
+            if (!string.IsNullOrEmpty(m_filePath))
+            {
+                m_filePath = Path.GetDirectoryName(m_filePath);
+            }
+        }
+        m_selected = GUILayout.SelectionGrid(m_selected, new string[] { "2x2", "4x4", "8x8", "16x16", "32x32", "64x64" }, 6);
+        m_filePath = EditorGUILayout.TextField("File path to store data", m_filePath);
         EditorGUILayout.Separator();
         EditorGUILayout.BeginHorizontal();
         if (GUILayout.Button("Begin slice"))
@@ -41,7 +57,7 @@ public class SceneSlicerWizard : EditorWindow
             else
             {
                 //var node = GameObject.Instantiate(m_scenePrefab.transform.FindChild("Cacti"));
-                SliceScene(m_scenePrefab, (int)Math.Pow(2, selected + 1));
+                SliceScene(m_scenePrefab, (int)Math.Pow(2, m_selected + 1));
             }
         }
         if (GUILayout.Button("Clean up"))
@@ -144,6 +160,15 @@ public class SceneSlicerWizard : EditorWindow
             Debug.Log(sceneTerrain + " " + startPoint + " " + sceneSize);
 
             GameObject.DestroyImmediate(rubbishNode);
+
+            foreach (var item in m_cellPrefabList)
+            {
+                PrefabUtility.CreatePrefab(string.Concat(m_filePath, "/", item.name, ".prefab"), item);
+            }
+        }
+        else
+        {
+            Debug.Log("no Terrain");
         }
     }
 
@@ -191,6 +216,7 @@ public class SceneSlicerWizard : EditorWindow
     {
         foreach (var item in m_cellPrefabList)
         {
+            AssetDatabase.DeleteAsset(string.Concat(m_filePath, "/", item.name, ".prefab"));
             GameObject.DestroyImmediate(item);
         }
         m_cellPrefabList.Clear();
