@@ -41,7 +41,7 @@ public class SceneSlicerWizard : EditorWindow
             m_filePath = AssetDatabase.GetAssetPath(m_scenePrefab);
             if (!string.IsNullOrEmpty(m_filePath))
             {
-                m_filePath = Path.GetDirectoryName(m_filePath);
+                m_filePath = Path.GetDirectoryName(m_filePath) + "/" + m_scenePrefab.name;
             }
         }
         m_selected = GUILayout.SelectionGrid(m_selected, new string[] { "2x2", "4x4", "8x8", "16x16", "32x32", "64x64" }, 6);
@@ -66,6 +66,11 @@ public class SceneSlicerWizard : EditorWindow
             CleanUpCellPrefab();
         }
         EditorGUILayout.EndHorizontal();
+        EditorGUILayout.Separator();
+        if (GUILayout.Button("Show Transform Info"))
+        {
+            Debug.Log(string.Concat(Selection.activeTransform, ": ", Selection.activeTransform.position, " ", Selection.activeTransform.rotation, " ", Selection.activeTransform.localScale));
+        }
         EditorGUILayout.EndVertical();
         EditorGUILayout.EndScrollView();
     }
@@ -137,6 +142,7 @@ public class SceneSlicerWizard : EditorWindow
                             CleanUpNewTran(node, rubbishNode.transform);
                             node.name = child.name;
                             node.transform.parent = FindCellPrefabParentByTargetTran(child, cellPrefab[i, j].transform);
+                            CopyTranInfo(child, node);
                         }
                         else
                         {//显示节点需要按照坐标分配
@@ -148,6 +154,7 @@ public class SceneSlicerWizard : EditorWindow
                                 CleanUpNewTran(node, rubbishNode.transform);
                                 node.name = child.name;
                                 node.transform.parent = FindCellPrefabParentByTargetTran(child, cellPrefab[i, j].transform);
+                                CopyTranInfo(child, node);
                                 hasHandle = true;
                                 break;
                             }
@@ -161,15 +168,27 @@ public class SceneSlicerWizard : EditorWindow
 
             GameObject.DestroyImmediate(rubbishNode);
 
-            foreach (var item in m_cellPrefabList)
+            for (int i = 0; i < m_cellPrefabList.Count; i++)
             {
-                PrefabUtility.CreatePrefab(string.Concat(m_filePath, "/", item.name, ".prefab"), item);
+                var item = m_cellPrefabList[i];
+                var prefabPath = string.Concat(m_filePath, "/", item.name, ".prefab");
+                if (!Directory.Exists(m_filePath))
+                    Directory.CreateDirectory(m_filePath);
+                PrefabUtility.CreatePrefab(prefabPath, item);
+                m_cellPrefabList[i] = PrefabUtility.ConnectGameObjectToPrefab(item, AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath));
             }
         }
         else
         {
             Debug.Log("no Terrain");
         }
+    }
+
+    private void CopyTranInfo(Transform srcTran, Transform tarTran)
+    {
+        tarTran.localPosition = srcTran.localPosition;
+        tarTran.localRotation = srcTran.localRotation;
+        tarTran.localScale = srcTran.localScale;
     }
 
     private void CreateBorder(Vector3 startPoint, int dimension, float cellX, float cellZ)
@@ -220,6 +239,11 @@ public class SceneSlicerWizard : EditorWindow
             GameObject.DestroyImmediate(item);
         }
         m_cellPrefabList.Clear();
+        if (Directory.Exists(m_filePath))
+        {
+            Directory.Delete(m_filePath, true);
+            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
+        }
     }
 
     private void CleanUpNewTran(Transform node, Transform rubbishNode)
