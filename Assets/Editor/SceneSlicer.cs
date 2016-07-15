@@ -3,6 +3,7 @@ using UnityEditor;
 using System.Collections;
 using System;
 using System.Collections.Generic;
+using System.Text;
 
 public class SceneSlicer
 {
@@ -101,9 +102,10 @@ public class SceneSlicerWizard : EditorWindow
                     isConstructorNode = true;
                     if (child.gameObject.GetComponent<MeshRenderer>() != null
                     || child.gameObject.GetComponent<Light>() != null
+                    || child.gameObject.GetComponent<Animator>() != null
                     || child.gameObject.GetComponent<ParticleSystem>() != null)
                     {
-                        Debug.LogError("child contain component: " + child);//违反设定，结构节点不能作为显示元素
+                        Debug.LogError("child contain component: " + child + " childCount: " + child.transform.childCount);//违反设定，结构节点不能作为显示元素
                     }
                 }
                 var hasHandle = false;
@@ -211,16 +213,23 @@ public class SceneSlicerWizard : EditorWindow
     {
         var stack = new Stack<string>();
         var sourceParent = sourceTran;
+        //var sb = new StringBuilder();
+        //sb.Append(" source: ");
         while (sourceParent.parent != null)
         {
+            //sb.AppendFormat("{0}.", sourceParent.parent.name);
             stack.Push(sourceParent.parent.name);
             sourceParent = sourceParent.parent;
         }
 
         Transform result = cellTran;
+        //sb.Append(" cell: ");
+        stack.Pop();//把根节点抛出
         while (stack.Count != 0)
         {
-            var child = cellTran.FindChild(stack.Pop());
+            var sourceChild = stack.Pop();
+            var child = result.FindChild(sourceChild);
+            //sb.AppendFormat("{0}.", sourceChild);
             if (child != null)
             {
                 result = child;
@@ -230,6 +239,7 @@ public class SceneSlicerWizard : EditorWindow
                 break;
             }
         }
+        //Debug.Log(sb);
         return result;
     }
 
