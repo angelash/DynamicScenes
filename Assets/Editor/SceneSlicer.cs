@@ -71,6 +71,11 @@ public class SceneSlicerWizard : EditorWindow
         {
             Debug.Log(string.Concat(Selection.activeTransform, ": ", Selection.activeTransform.position, " ", Selection.activeTransform.rotation, " ", Selection.activeTransform.localScale));
         }
+        if (GUILayout.Button("Normalize Prefab"))
+        {
+            NormalizePrefab(m_scenePrefab);
+        }
+
         EditorGUILayout.EndVertical();
         EditorGUILayout.EndScrollView();
     }
@@ -91,6 +96,7 @@ public class SceneSlicerWizard : EditorWindow
             var cellPos = new Vector2[dimension, dimension];
             var cellEndPos = new Vector2[dimension, dimension];
             var cellPrefab = new GameObject[dimension, dimension];
+            var cellNodeDic = new Dictionary<Transform, Transform>[dimension, dimension];//单元格对应原prefab节点的映射（节点有重名）
 
             var rubbishNode = new GameObject();//用来存放复制节点时多出来的子节点，然后一起删掉
             rubbishNode.name = "rubbish";
@@ -99,6 +105,7 @@ public class SceneSlicerWizard : EditorWindow
             CreateBorder(startPoint, dimension, cellX, cellZ);
 
             CleanUpCellPrefab();
+            //初始化临时容器
             for (int i = 0; i < dimension; i++)
             {
                 for (int j = 0; j < dimension; j++)
@@ -109,6 +116,8 @@ public class SceneSlicerWizard : EditorWindow
                     go.name = string.Format("{0}_{1}_{2}", scenePrefab.name, i + 1, j + 1);
                     cellPrefab[i, j] = go;
                     m_cellPrefabList.Add(go);
+                    cellNodeDic[i, j] = new Dictionary<Transform, Transform>();
+                    cellNodeDic[i, j][scenePrefab.transform] = go.transform;
                 }
             }
 
@@ -127,6 +136,10 @@ public class SceneSlicerWizard : EditorWindow
                     || child.gameObject.GetComponent<ParticleSystem>() != null)
                     {
                         Debug.LogError("child contain component: " + child + " childCount: " + child.transform.childCount);//违反设定，结构节点不能作为显示元素
+                        foreach (var item in child.transform)
+                        {
+                            Debug.LogError(item);
+                        }
                     }
                 }
                 var hasHandle = false;
@@ -141,8 +154,9 @@ public class SceneSlicerWizard : EditorWindow
                             var node = GameObject.Instantiate(child);
                             CleanUpNewTran(node, rubbishNode.transform);
                             node.name = child.name;
-                            node.transform.parent = FindCellPrefabParentByTargetTran(child, cellPrefab[i, j].transform);
+                            node.transform.parent = FindCellPrefabParentByTargetTran(child, cellPrefab[i, j].transform, cellNodeDic[i, j]);
                             CopyTranInfo(child, node);
+                            cellNodeDic[i, j][child] = node;
                         }
                         else
                         {//显示节点需要按照坐标分配
@@ -153,7 +167,7 @@ public class SceneSlicerWizard : EditorWindow
                                 var node = GameObject.Instantiate(child);
                                 CleanUpNewTran(node, rubbishNode.transform);
                                 node.name = child.name;
-                                node.transform.parent = FindCellPrefabParentByTargetTran(child, cellPrefab[i, j].transform);
+                                node.transform.parent = FindCellPrefabParentByTargetTran(child, cellPrefab[i, j].transform, cellNodeDic[i, j]);
                                 CopyTranInfo(child, node);
                                 hasHandle = true;
                                 break;
@@ -181,6 +195,29 @@ public class SceneSlicerWizard : EditorWindow
         else
         {
             Debug.Log("no Terrain");
+        }
+    }
+
+    private void NormalizePrefab(GameObject scenePrefab)
+    {
+        var children = GetAllChildren(scenePrefab.transform);
+        foreach (var child in children)
+        {
+            if (child.transform.childCount != 0)
+            {
+                if (child.gameObject.GetComponent<MeshRenderer>() != null
+                || child.gameObject.GetComponent<Light>() != null
+                || child.gameObject.GetComponent<Animator>() != null
+                || child.gameObject.GetComponent<ParticleSystem>() != null)
+                {
+                    Debug.LogError("child contain component: " + child + " childCount: " + child.transform.childCount);//违反设定，结构节点不能作为显示元素
+                    foreach (Transform item in child.transform)
+                    {
+                        Debug.LogError(item);
+                        GameObject.DestroyImmediate(item);
+                    }
+                }
+            }
         }
     }
 
@@ -259,38 +296,43 @@ public class SceneSlicerWizard : EditorWindow
         }
     }
 
-    private Transform FindCellPrefabParentByTargetTran(Transform sourceTran, Transform cellTran)
+    private Transform FindCellPrefabParentByTargetTran(Transform sourceTran, Transform cellTran, Dictionary<Transform, Transform> cellNodeDic)
     {
-        var stack = new Stack<string>();
-        var sourceParent = sourceTran;
-        //var sb = new StringBuilder();
-        //sb.Append(" source: ");
-        while (sourceParent.parent != null)
-        {
-            //sb.AppendFormat("{0}.", sourceParent.parent.name);
-            stack.Push(sourceParent.parent.name);
-            sourceParent = sourceParent.parent;
-        }
+        if (cellNodeDic.ContainsKey(sourceTran.parent))
+            return cellNodeDic[sourceTran.parent];
+        else
+            Debug.LogError("parent not exist: " + sourceTran.parent);
+        return null;
+        //var stack = new Stack<Transform>();
+        //var sourceParent = sourceTran;
+        ////var sb = new StringBuilder();
+        ////sb.Append(" source: ");
+        //while (sourceParent.parent != null)
+        //{
+        //    //sb.AppendFormat("{0}.", sourceParent.parent.name);
+        //    stack.Push(sourceParent.parent);
+        //    sourceParent = sourceParent.parent;
+        //}
 
-        Transform result = cellTran;
-        //sb.Append(" cell: ");
-        stack.Pop();//把根节点抛出
-        while (stack.Count != 0)
-        {
-            var sourceChild = stack.Pop();
-            var child = result.FindChild(sourceChild);
-            //sb.AppendFormat("{0}.", sourceChild);
-            if (child != null)
-            {
-                result = child;
-            }
-            else
-            {
-                break;
-            }
-        }
-        //Debug.Log(sb);
-        return result;
+        //Transform result = cellTran;
+        ////sb.Append(" cell: ");
+        //var root = stack.Pop();//把根节点抛出
+        //while (stack.Count != 0)
+        //{
+        //    var sourceChild = stack.Pop();
+        //    var child = result.FindChild(sourceChild);
+        //    //sb.AppendFormat("{0}.", sourceChild);
+        //    if (child != null)
+        //    {
+        //        result = child;
+        //    }
+        //    else
+        //    {
+        //        break;
+        //    }
+        //}
+        ////Debug.Log(sb);
+        //return result;
     }
 
     private List<Transform> GetAllChildren(Transform tran)
