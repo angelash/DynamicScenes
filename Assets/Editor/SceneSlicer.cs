@@ -128,6 +128,7 @@ public class SceneSlicerWizard : EditorWindow
                 if (child.gameObject == sceneTerrain.gameObject)
                     continue;
                 var isConstructorNode = false;//是否为结构节点
+                //先判断是否为结构节点
                 if (child.transform.childCount != 0)
                 {
                     isConstructorNode = true;
@@ -143,6 +144,8 @@ public class SceneSlicerWizard : EditorWindow
                         }
                     }
                 }
+
+                //根据规则处理每个节点的复制
                 var hasHandle = false;
                 for (int i = 0; i < dimension; i++)
                 {
@@ -183,6 +186,7 @@ public class SceneSlicerWizard : EditorWindow
 
             GameObject.DestroyImmediate(rubbishNode);
 
+            //保存切割后prefab
             for (int i = 0; i < m_cellPrefabList.Count; i++)
             {
                 var item = m_cellPrefabList[i];
@@ -194,6 +198,7 @@ public class SceneSlicerWizard : EditorWindow
             }
             AssetDatabase.SaveAssets();
 
+            //复制一份到新建的独立场景中
             for (int i = 0; i < m_cellPrefabList.Count; i++)
             {
                 var item = m_cellPrefabList[i];
@@ -203,6 +208,7 @@ public class SceneSlicerWizard : EditorWindow
                 EditorSceneManager.SaveScene(scene, string.Concat(m_filePath, "/", item.name, ".unity"));
             }
 
+            //删除原来的prefab实例
             for (int i = 0; i < m_cellPrefabList.Count; i++)
             {
                 GameObject.DestroyImmediate(m_cellPrefabList[i]);
