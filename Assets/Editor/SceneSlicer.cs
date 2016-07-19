@@ -200,7 +200,16 @@ public class SceneSlicerWizard : EditorWindow
 
     private void NormalizePrefab(GameObject scenePrefab)
     {
+        var prefabPath = AssetDatabase.GetAssetPath(scenePrefab);
+        var tempPrefab = GameObject.Instantiate(scenePrefab);
+        tempPrefab.name = scenePrefab.name;
+
         var children = GetAllChildren(scenePrefab.transform);
+
+        var rubbishNode = new GameObject();//用来存放复制节点时多出来的子节点，然后一起删掉
+        rubbishNode.name = "rubbish";
+        rubbishNode.SetActive(false);
+
         foreach (var child in children)
         {
             if (child.transform.childCount != 0)
@@ -210,15 +219,21 @@ public class SceneSlicerWizard : EditorWindow
                 || child.gameObject.GetComponent<Animator>() != null
                 || child.gameObject.GetComponent<ParticleSystem>() != null)
                 {
-                    Debug.LogError("child contain component: " + child + " childCount: " + child.transform.childCount);//违反设定，结构节点不能作为显示元素
+                    Debug.Log("child contain component: " + child + " childCount: " + child.transform.childCount);//违反设定，结构节点不能作为显示元素
                     foreach (Transform item in child.transform)
                     {
-                        Debug.LogError(item);
-                        GameObject.DestroyImmediate(item);
+                        Debug.Log(item);
+                        item.parent = rubbishNode.transform;
                     }
                 }
             }
         }
+
+        PrefabUtility.CreatePrefab(prefabPath, tempPrefab, ReplacePrefabOptions.ReplaceNameBased);
+        AssetDatabase.SaveAssets();
+
+        GameObject.DestroyImmediate(tempPrefab);
+        GameObject.DestroyImmediate(rubbishNode);
     }
 
     private void CopyTranInfo(Transform srcTran, Transform tarTran)
