@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using System.Collections;
 using System;
 using System.Collections.Generic;
@@ -191,6 +192,22 @@ public class SceneSlicerWizard : EditorWindow
                 PrefabUtility.CreatePrefab(prefabPath, item);
                 m_cellPrefabList[i] = PrefabUtility.ConnectGameObjectToPrefab(item, AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath));
             }
+            AssetDatabase.SaveAssets();
+
+            for (int i = 0; i < m_cellPrefabList.Count; i++)
+            {
+                var item = m_cellPrefabList[i];
+                var prefabPath = string.Concat(m_filePath, "/", item.name, ".prefab");
+                var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+                var go = GameObject.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath));
+                EditorSceneManager.SaveScene(scene, string.Concat(m_filePath, "/", item.name, ".unity"));
+            }
+
+            for (int i = 0; i < m_cellPrefabList.Count; i++)
+            {
+                GameObject.DestroyImmediate(m_cellPrefabList[i]);
+            }
+
         }
         else
         {
@@ -287,8 +304,11 @@ public class SceneSlicerWizard : EditorWindow
     {
         foreach (var item in m_cellPrefabList)
         {
-            AssetDatabase.DeleteAsset(string.Concat(m_filePath, "/", item.name, ".prefab"));
-            GameObject.DestroyImmediate(item);
+            if (item)
+            {
+                AssetDatabase.DeleteAsset(string.Concat(m_filePath, "/", item.name, ".prefab"));
+                GameObject.DestroyImmediate(item);
+            }
         }
         m_cellPrefabList.Clear();
         if (Directory.Exists(m_filePath))
@@ -318,36 +338,6 @@ public class SceneSlicerWizard : EditorWindow
         else
             Debug.LogError("parent not exist: " + sourceTran.parent);
         return null;
-        //var stack = new Stack<Transform>();
-        //var sourceParent = sourceTran;
-        ////var sb = new StringBuilder();
-        ////sb.Append(" source: ");
-        //while (sourceParent.parent != null)
-        //{
-        //    //sb.AppendFormat("{0}.", sourceParent.parent.name);
-        //    stack.Push(sourceParent.parent);
-        //    sourceParent = sourceParent.parent;
-        //}
-
-        //Transform result = cellTran;
-        ////sb.Append(" cell: ");
-        //var root = stack.Pop();//把根节点抛出
-        //while (stack.Count != 0)
-        //{
-        //    var sourceChild = stack.Pop();
-        //    var child = result.FindChild(sourceChild);
-        //    //sb.AppendFormat("{0}.", sourceChild);
-        //    if (child != null)
-        //    {
-        //        result = child;
-        //    }
-        //    else
-        //    {
-        //        break;
-        //    }
-        //}
-        ////Debug.Log(sb);
-        //return result;
     }
 
     private List<Transform> GetAllChildren(Transform tran)
