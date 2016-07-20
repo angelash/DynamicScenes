@@ -2,7 +2,7 @@
 using UnityEditor;
 using System.Collections;
 
-enum Size
+public enum Size
 {
     _2x2 = 2,
     _4x4 = 4,
@@ -12,277 +12,93 @@ enum Size
     _64x64 = 64
 }
 
-public class SliceTerrain : EditorWindow
+public class CtrlSliceTerrain
 {
+    public GameObject[] terrainGameObjects;
+    public Terrain[] terrains;
+    public TerrainData[] data;
 
-    private GameObject[] terrainGameObjects;
-    private Terrain[] terrains;
-    private TerrainData[] data;
 
+    public static Terrain baseTerrain;
+    public TerrainData baseData;
 
-    static Terrain baseTerrain;
-    private TerrainData baseData;
 
+    public static Size enumValue = Size._2x2;
 
-    static Size enumValue = Size._2x2;
+    public static int resolutionPerPatch = 8;
 
-    static int resolutionPerPatch = 8;
 
+    public string fileName;
 
-    private string fileName;
+    public int size;
+    public int terrainsWide;
+    public int terrainsLong;
 
-    private int size;
-    private int terrainsWide;
-    private int terrainsLong;
 
+    public int x;
+    public int y;
+    public int i;
+    public int z;
 
-    private int x;
-    private int y;
-    private int i;
-    private int z;
+    public float oldWidth;
+    public float oldHeight;
+    public float oldLength;
+    public float newWidth;
+    public float newLength;
 
-    private float oldWidth;
-    private float oldHeight;
-    private float oldLength;
-    private float newWidth;
-    private float newLength;
 
+    public float xPos;
+    public float yPos;
+    public float zPos;
 
-    private float xPos;
-    private float yPos;
-    private float zPos;
+    public int newHeightMapResolution;
+    public int newEvenHeightMapResolution;
 
-    private int newHeightMapResolution;
-    private int newEvenHeightMapResolution;
 
+    public int newDetailResolution;
+    public int newAlphaMapResolution;
+    public int newBaseMapResolution;
 
-    private int newDetailResolution;
-    private int newAlphaMapResolution;
-    private int newBaseMapResolution;
+    public SplatPrototype[] splatProtos;
+    public DetailPrototype[] detailProtos;
+    public TreePrototype[] treeProtos;
+    public TreeInstance[] treeInst;
 
-    private SplatPrototype[] splatProtos;
-    private DetailPrototype[] detailProtos;
-    private TreePrototype[] treeProtos;
-    private TreeInstance[] treeInst;
+    public float grassStrength;
+    public float grassAmount;
+    public float grassSpeed;
+    public Color grassTint;
 
-    private float grassStrength;
-    private float grassAmount;
-    private float grassSpeed;
-    private Color grassTint;
+    public int[] layers;
+    public int arrayPos;
 
-    private int[] layers;
-    private int arrayPos;
 
+    public float progress;
+    public float progressScale;
 
-    private float progress;
-    private float progressScale;
+    public bool createPressed = false;
 
-    private bool createPressed = false;
+    public GameObject[] selection;
 
-    private GameObject[] selection;
+    public float treeDistance;
+    public float treeBillboardDistance;
+    public float treeCrossFadeLength;
+    public int treeMaximumFullLODCount;
+    public float detailObjectDistance;
+    public float detailObjectDensity;
+    public float heightmapPixelError;
+    public int heightmapMaximumLOD;
+    public float basemapDistance;
+    public int lightmapIndex;
+    public bool castShadows;
+    public Material materialTemplate;
+    public TerrainRenderFlags editorRenderFlags;
 
-    private float treeDistance;
-    private float treeBillboardDistance;
-    private float treeCrossFadeLength;
-    private int treeMaximumFullLODCount;
-    private float detailObjectDistance;
-    private float detailObjectDensity;
-    private float heightmapPixelError;
-    private int heightmapMaximumLOD;
-    private float basemapDistance;
-    private int lightmapIndex;
-    private bool castShadows;
-    private Material materialTemplate;
-    private TerrainRenderFlags editorRenderFlags;
-
-    private bool isError;
-
-    private bool overwrite = false;
-    static bool blend = true;
-
-    static bool copyAllTrees;
-    static bool copyAllDetails;
-
-    //tooltips for displaying additional information on mouseover
-    private GUIContent label1;
-    private GUIContent label2;
-    private GUIContent label3;
-    private GUIContent label4;
-    private GUIContent label5;
-    private GUIContent label6;
-    private GUIContent label7;
-    private GUIContent label8;
-    private GUIContent label9;
-    private GUIContent label10;
-
-    [MenuItem("SceneSlicer/Slice Terrain")]
-    static void ShowWindow()
-    {
-        var window = EditorWindow.GetWindow<SliceTerrain>();
-        window.position = new Rect(Screen.width / 2 + 300, 400, 600, 300);
-
-    }
-
-    void OnEnable()
-    {
-
-        minSize = new Vector2(660, 370);
-
-        if (Application.isPlaying)
-            isError = true;
-        else
-            isError = false;
-
-        if (!isError)
-        {
-
-            if (!PlayerPrefs.HasKey("File Path"))
-            {
-                PlayerPrefs.SetString("File Path", "Assets/TerrainSlicing/TerrainData");
-                fileName = "Assets/TerrainSlicing/TerrainData";
-            }
-            else
-                fileName = PlayerPrefs.GetString("File Path");
-
-            selection = Selection.gameObjects;
-
-            if (selection.Length == 1)
-                if (selection[0].GetComponent<Terrain>() != null)
-                    baseTerrain = selection[0].GetComponent<Terrain>();
-                else
-                    Debug.Log("Selection Error - Could not get selection : Selection is not a terrain!");
-            else if (selection.Length > 1)
-                Debug.Log("Selection Error - Could not get selection : Too many objects selected!");
-
-            //Create the tooltips
-            label1 = new GUIContent("Base Terrain to Slice", "This terrain's resolution data must be large enough so that when sliced," +
-            "the resulting terrain pieces resolutions are greater than their minimum allowable values. Minimum values are:\n" +
-            "Heightmap - 33\nBaseMap - 16\nControl Texture - 16\nDetail - Cannot be 0");
-
-            label2 = new GUIContent("Resolution Per Patch", "Ideally, this should be the same as your base terrain's detail resolution per patch.");
-
-            label3 = new GUIContent("Slicing Dimensions", "ex: 2 x 2 will divide terrain by 2 along x axis and 2 along z axis, producing 4 terrain slices.\n" +
-            "4 x 4 will divide by 4, producing 16 terrain slices, and so on . . .");
-
-            label4 = new GUIContent("File Path to Store Data", "This is the file path where the created terrain data will be stored.");
-
-            label5 = new GUIContent("Reset File Path to Default: " + PlayerPrefs.GetString("File Path"), "This button simply resets the field above with the " +
-            "default file path stored in player prefs (which you can change at any time by entering a new file path above and clicking the button below this one)." +
-            "Use this if you make a mistake or need to reset the file path to the default for any reason.");
-
-            label6 = new GUIContent("Save Current File Path as Default File Path", "Click this if you want the file path entered above to be saved as the default file path." +
-            "This will make this file path the default file path shown in the above field when you open the Terrain Slicing Tool.");
-
-            label7 = new GUIContent("Overwrite Terrain Data", "The terrain data names are derived from the base terrain's name, so if you try to slice a terrain with the same name as a terrain that you've " +
-            "sliced in the past, you risk overwriting the existing terrain data.\n\nYou may wish for this data to be overwritten, but to keep you from overwriting data on accident " +
-            "I've included this checkbox field. By default it is unchecked, and the program will not let you overwrite data while it is left unchecked. So if you intentionally want " +
-            "to overwrite data, check this box.");
-
-            label8 = new GUIContent("Blend Alpamap Edges", "This option will set the alphamap edges of neighboring terrains to the same value, which blends the edges " +
-            "of the neighboring terrain's alphamaps so that there is no visible seem between the two (also blends corner between 4 terrains).\n\n" +
-            "This blending will very slightly alter the alphamaps of the terrains, which you will notice in some instances, but these changes should not present much of a problem.\n\n" +
-            "You can also try slicing with this option unchecked, but you will need to manually check the seems between terrains to ensure none are visible. If they are, you will have to re-slice with the blending option checked.");
-
-            label9 = new GUIContent("Copy All Trees", "The base terrain contains a list of trees which you can paint on it. By default the program will copy every " +
-            "tree from this list to every terrain slice created during the slicing process, regardless of whether that terrain slice currently has that tree painted on it.\n\n" +
-            "If you want each newly created terrain slice to have the full list of trees from the base terrain, leave this box checked.\n\n" +
-            "However, if you would rather copy only those trees which the terrain slice has painted on it, uncheck this box.\n\nRegardless of the option you choose, all visible trees on your terrain will be copied to the new terrains accurately.");
-
-            label10 = new GUIContent("Copy All Detail Meshes", "The base terrain contains a list of detail meshes (plants and grasses which you can paint on it. By default the program will copy every " +
-            "detail mesh from this list to every terrain slice created during the slicing process, regardless of whether that terrain slice currently has the detail mesh painted on it.\n\n" +
-            "If you want each newly created terrain slice to have the full list of detail meshes from the base terrain, leave this box checked.\n\n" +
-            "However, if you would rather copy only those detail meshes which the terrain slice has painted on it, uncheck this box.\n\nRegardless of the option you choose, all visible detail meshes on your terrain will be copied to the new terrains with high accuracy.");
-        }
-    }
-
-    //Our GUI
-    void OnGUI()
-    {
-        if (Application.isPlaying)
-            isError = true;
-
-        if (!isError)
-        {
-
-            GUILayout.Label("Configuration", EditorStyles.boldLabel);
-
-
-            EditorGUILayout.LabelField("Hover over the field labels (left of each field) or buttons to view more detailed information about each field.");
-            EditorGUILayout.LabelField("");
-            baseTerrain = EditorGUILayout.ObjectField(label1, baseTerrain, typeof(Terrain), true) as Terrain;
-
-            EditorGUILayout.LabelField("");// Used for Spacing only// Used for Spacing only
-
-            resolutionPerPatch = EditorGUILayout.IntField(label2, resolutionPerPatch);
-            EditorGUILayout.LabelField("");	// Used for Spacing only
-
-            enumValue = (Size)EditorGUILayout.EnumPopup(label3, enumValue);
-            EditorGUILayout.LabelField("");// Used for Spacing only
-
-            fileName = EditorGUILayout.TextField(label4, fileName);
-            if (GUILayout.Button(label5))
-            {
-                GUIUtility.keyboardControl = 0;
-                fileName = PlayerPrefs.GetString("File Path");
-            }
-
-            if (GUILayout.Button(label6))
-                SaveFilePath();
-            EditorGUILayout.LabelField("");	// Used for Spacing only
-
-            overwrite = EditorGUILayout.Toggle(label7, overwrite);
-            blend = EditorGUILayout.Toggle(label8, blend);
-
-            copyAllTrees = EditorGUILayout.Toggle(label9, copyAllTrees);
-            copyAllDetails = EditorGUILayout.Toggle(label10, copyAllDetails);
-
-            EditorGUILayout.LabelField("");	// Used for Spacing only
-
-            if (GUILayout.Button("Create Terrain"))
-            {
-                if (baseTerrain != null)
-                {
-                    createPressed = true;
-
-                    StoreData();
-
-                    if (CheckForErrors())
-                    {
-                        CreateTerrainData();
-                        CopyTerrainData();
-                        //Optional step
-                        if (blend)
-                            BlendEdges();
-                        SetNeighbors();
-                        this.Close();
-                    }
-                    else
-                        createPressed = false;
-                }
-                else
-                {
-                    this.ShowNotification(new GUIContent("Base Terrain must be selected."));
-                    GUIUtility.keyboardControl = 0; // Added to shift focus to original window rather than the notification
-                }
-            }
-        }
-        else
-            EditorGUILayout.LabelField("The Terrain Slicing Tool cannot operate in play mode. Exit play mode and reselect Slicing Option.");
-
-
-    }//End the OnGUI function
-
-    //Saves the current filepath stored in fileName to the key "File Path" in PlayerPrefs
-    void SaveFilePath()
-    {
-        PlayerPrefs.SetString("File Path", fileName);
-        label5 = new GUIContent("Reset File Path to Default: " + PlayerPrefs.GetString("File Path"), "This button simply resets the field above with the " +
-        "default file path stored in player prefs (which you can change at any time by entering a new file path above and clicking the button below this one)." +
-        "Use this if you make a mistake or need to reset the file path to the default for any reason.");
-    }
+    public static bool copyAllTrees;
+    public static bool copyAllDetails;
 
     //Retrieve and store all the data from the old terrain into our variables
-    void StoreData()
+    public void StoreData()
     {
         size = (int)enumValue;
         terrainsLong = size;
@@ -340,66 +156,8 @@ public class SliceTerrain : EditorWindow
         grassTint = baseData.wavingGrassTint;
     }
 
-    //Check for any errors with User Input
-    bool CheckForErrors()
-    {
-        if (resolutionPerPatch < 8)
-        {
-            this.ShowNotification(new GUIContent("Resolution Per Patch must be 8 or greater"));
-            GUIUtility.keyboardControl = 0; // Added to shift focus to original window rather than the notification
-            return false;
-        }
-        else if (!Mathf.IsPowerOfTwo(resolutionPerPatch))
-        {
-            this.ShowNotification(new GUIContent("Resolution Per Patch must be a power of 2"));
-            GUIUtility.keyboardControl = 0;
-            return false;
-        }
-        else if (newHeightMapResolution < 33)
-        {
-            this.ShowNotification(new GUIContent("Error with Heightmap Resolution - See Console for More Information"));
-            GUIUtility.keyboardControl = 0;
-            Debug.Log("The Heightmap Resolution for the new terrains must be 33 or larger. Currently it is " + newHeightMapResolution.ToString() + ".\nThe new Heightmap Resolution is calculated as"
-            + "follows: New Resolution = ((Old Resolution - 1) / New Dimension Width) + 1 -- For example, a 4x4 grid has a New Dimension Width of 4.\n You can rectify this problem by"
-            + "either increasing the heightmap resolution of the base terrain, or reducing the number of new terrains to be created.");
-            return false;
-        }
-        else if (newAlphaMapResolution < 16)
-        {
-            this.ShowNotification(new GUIContent("Error with AlphaMap Resolution - See Console for More Information"));
-            GUIUtility.keyboardControl = 0;
-            Debug.Log("The Alpha Map Resolution of the new terrains is too small. Value must be 16 or greater. Current value is " + newAlphaMapResolution.ToString()
-            + ".\nPlease increase the Base Terrains alpha map resolution or reduce the number of new terrains to be created.");
-            return false;
-        }
-        else if (newBaseMapResolution < 16)
-        {
-            this.ShowNotification(new GUIContent("Error with BaseMap Resolution - See Console for More Information"));
-            GUIUtility.keyboardControl = 0;
-            Debug.Log("The Base Map Resolution of the new terrains is too small. Value must be 16 or greater. Current value is " + newBaseMapResolution.ToString()
-            + ".\nPlease increase the Base Terrains base map resolution or reduce the number of new terrains to be created.");
-            return false;
-        }
-        else if (baseData.detailResolution % size != 0)
-        {
-            this.ShowNotification(new GUIContent("Error with Detail Resolution - See Console for More Information"));
-            GUIUtility.keyboardControl = 0;
-            Debug.Log("The Base Terrains detail resolution does not divide perfectly. Please change the detail resolution or number of terrains to be created to rectify this issue.");
-            return false;
-        }
-        else if (!overwrite && AssetDatabase.LoadAssetAtPath(fileName + "/" + baseTerrain.name + "_Data_" + 1 + "_" + 1 + ".asset", typeof(TerrainData)) != null)
-        {
-
-            this.ShowNotification(new GUIContent("Terrain Data with this name already exist. Please check 'Overwrite' if you wish to overwrite the existing Data"));
-            GUIUtility.keyboardControl = 0;
-            return false;
-        }
-        else
-            return true;
-    }
-
     //Create the terrain data (including
-    void CreateTerrainData()
+    public void CreateTerrainData()
     {
         progress = 0.0f;
         EditorUtility.DisplayProgressBar("Progress", "Generating Terrains", progress);
@@ -430,7 +188,7 @@ public class SliceTerrain : EditorWindow
         }
     }
 
-    void CopyTerrainData()
+    public void CopyTerrainData()
     {
         progressScale = .2f / (terrainsLong * terrainsWide);
         arrayPos = 0;
@@ -631,7 +389,7 @@ public class SliceTerrain : EditorWindow
             data[i].RefreshPrototypes();
     }
 
-    void BlendEdges()
+    public void BlendEdges()
     {
         int alphaWidth = data[0].alphamapWidth;
         int alphaHeight = data[0].alphamapHeight;
@@ -804,7 +562,7 @@ public class SliceTerrain : EditorWindow
 
 
 
-    void SetNeighbors()
+    public void SetNeighbors()
     {
         arrayPos = 0;
 
@@ -851,5 +609,251 @@ public class SliceTerrain : EditorWindow
         EditorUtility.ClearProgressBar();
 
     }//End the button press if statement
+}
+
+public class SliceTerrain : EditorWindow
+{
+    public CtrlSliceTerrain ctrl = new CtrlSliceTerrain();
+    public bool isError;
+
+    public bool overwrite = false;
+    static bool blend = true;
+
+
+    //tooltips for displaying additional information on mouseover
+    public GUIContent label1;
+    public GUIContent label2;
+    public GUIContent label3;
+    public GUIContent label4;
+    public GUIContent label5;
+    public GUIContent label6;
+    public GUIContent label7;
+    public GUIContent label8;
+    public GUIContent label9;
+    public GUIContent label10;
+
+    [MenuItem("SceneSlicer/Slice Terrain")]
+    static void ShowWindow()
+    {
+        var window = EditorWindow.GetWindow<SliceTerrain>();
+        window.position = new Rect(Screen.width / 2 + 300, 400, 600, 300);
+
+    }
+
+    void OnEnable()
+    {
+
+        minSize = new Vector2(660, 370);
+
+        if (Application.isPlaying)
+            isError = true;
+        else
+            isError = false;
+
+        if (!isError)
+        {
+
+            if (!PlayerPrefs.HasKey("File Path"))
+            {
+                PlayerPrefs.SetString("File Path", "Assets/TerrainSlicing/TerrainData");
+                ctrl.fileName = "Assets/TerrainSlicing/TerrainData";
+            }
+            else
+                ctrl.fileName = PlayerPrefs.GetString("File Path");
+
+            ctrl.selection = Selection.gameObjects;
+
+            if (ctrl.selection.Length == 1)
+                if (ctrl.selection[0].GetComponent<Terrain>() != null)
+                    CtrlSliceTerrain.baseTerrain = ctrl.selection[0].GetComponent<Terrain>();
+                else
+                    Debug.Log("Selection Error - Could not get selection : Selection is not a terrain!");
+            else if (ctrl.selection.Length > 1)
+                Debug.Log("Selection Error - Could not get selection : Too many objects selected!");
+
+            //Create the tooltips
+            label1 = new GUIContent("Base Terrain to Slice", "This terrain's resolution data must be large enough so that when sliced," +
+            "the resulting terrain pieces resolutions are greater than their minimum allowable values. Minimum values are:\n" +
+            "Heightmap - 33\nBaseMap - 16\nControl Texture - 16\nDetail - Cannot be 0");
+
+            label2 = new GUIContent("Resolution Per Patch", "Ideally, this should be the same as your base terrain's detail resolution per patch.");
+
+            label3 = new GUIContent("Slicing Dimensions", "ex: 2 x 2 will divide terrain by 2 along x axis and 2 along z axis, producing 4 terrain slices.\n" +
+            "4 x 4 will divide by 4, producing 16 terrain slices, and so on . . .");
+
+            label4 = new GUIContent("File Path to Store Data", "This is the file path where the created terrain data will be stored.");
+
+            label5 = new GUIContent("Reset File Path to Default: " + PlayerPrefs.GetString("File Path"), "This button simply resets the field above with the " +
+            "default file path stored in player prefs (which you can change at any time by entering a new file path above and clicking the button below this one)." +
+            "Use this if you make a mistake or need to reset the file path to the default for any reason.");
+
+            label6 = new GUIContent("Save Current File Path as Default File Path", "Click this if you want the file path entered above to be saved as the default file path." +
+            "This will make this file path the default file path shown in the above field when you open the Terrain Slicing Tool.");
+
+            label7 = new GUIContent("Overwrite Terrain Data", "The terrain data names are derived from the base terrain's name, so if you try to slice a terrain with the same name as a terrain that you've " +
+            "sliced in the past, you risk overwriting the existing terrain data.\n\nYou may wish for this data to be overwritten, but to keep you from overwriting data on accident " +
+            "I've included this checkbox field. By default it is unchecked, and the program will not let you overwrite data while it is left unchecked. So if you intentionally want " +
+            "to overwrite data, check this box.");
+
+            label8 = new GUIContent("Blend Alpamap Edges", "This option will set the alphamap edges of neighboring terrains to the same value, which blends the edges " +
+            "of the neighboring terrain's alphamaps so that there is no visible seem between the two (also blends corner between 4 terrains).\n\n" +
+            "This blending will very slightly alter the alphamaps of the terrains, which you will notice in some instances, but these changes should not present much of a problem.\n\n" +
+            "You can also try slicing with this option unchecked, but you will need to manually check the seems between terrains to ensure none are visible. If they are, you will have to re-slice with the blending option checked.");
+
+            label9 = new GUIContent("Copy All Trees", "The base terrain contains a list of trees which you can paint on it. By default the program will copy every " +
+            "tree from this list to every terrain slice created during the slicing process, regardless of whether that terrain slice currently has that tree painted on it.\n\n" +
+            "If you want each newly created terrain slice to have the full list of trees from the base terrain, leave this box checked.\n\n" +
+            "However, if you would rather copy only those trees which the terrain slice has painted on it, uncheck this box.\n\nRegardless of the option you choose, all visible trees on your terrain will be copied to the new terrains accurately.");
+
+            label10 = new GUIContent("Copy All Detail Meshes", "The base terrain contains a list of detail meshes (plants and grasses which you can paint on it. By default the program will copy every " +
+            "detail mesh from this list to every terrain slice created during the slicing process, regardless of whether that terrain slice currently has the detail mesh painted on it.\n\n" +
+            "If you want each newly created terrain slice to have the full list of detail meshes from the base terrain, leave this box checked.\n\n" +
+            "However, if you would rather copy only those detail meshes which the terrain slice has painted on it, uncheck this box.\n\nRegardless of the option you choose, all visible detail meshes on your terrain will be copied to the new terrains with high accuracy.");
+        }
+    }
+
+    //Our GUI
+    void OnGUI()
+    {
+        if (Application.isPlaying)
+            isError = true;
+
+        if (!isError)
+        {
+
+            GUILayout.Label("Configuration", EditorStyles.boldLabel);
+
+
+            EditorGUILayout.LabelField("Hover over the field labels (left of each field) or buttons to view more detailed information about each field.");
+            EditorGUILayout.LabelField("");
+            CtrlSliceTerrain.baseTerrain = EditorGUILayout.ObjectField(label1, CtrlSliceTerrain.baseTerrain, typeof(Terrain), true) as Terrain;
+
+            EditorGUILayout.LabelField("");// Used for Spacing only// Used for Spacing only
+
+            CtrlSliceTerrain.resolutionPerPatch = EditorGUILayout.IntField(label2, CtrlSliceTerrain.resolutionPerPatch);
+            EditorGUILayout.LabelField("");	// Used for Spacing only
+
+            CtrlSliceTerrain.enumValue = (Size)EditorGUILayout.EnumPopup(label3, CtrlSliceTerrain.enumValue);
+            EditorGUILayout.LabelField("");// Used for Spacing only
+
+            ctrl.fileName = EditorGUILayout.TextField(label4, ctrl.fileName);
+            if (GUILayout.Button(label5))
+            {
+                GUIUtility.keyboardControl = 0;
+                ctrl.fileName = PlayerPrefs.GetString("File Path");
+            }
+
+            if (GUILayout.Button(label6))
+                SaveFilePath();
+            EditorGUILayout.LabelField("");	// Used for Spacing only
+
+            overwrite = EditorGUILayout.Toggle(label7, overwrite);
+            blend = EditorGUILayout.Toggle(label8, blend);
+
+            CtrlSliceTerrain.copyAllTrees = EditorGUILayout.Toggle(label9, CtrlSliceTerrain.copyAllTrees);
+            CtrlSliceTerrain.copyAllDetails = EditorGUILayout.Toggle(label10, CtrlSliceTerrain.copyAllDetails);
+
+            EditorGUILayout.LabelField("");	// Used for Spacing only
+
+            if (GUILayout.Button("Create Terrain"))
+            {
+                if (CtrlSliceTerrain.baseTerrain != null)
+                {
+                    ctrl.createPressed = true;
+
+                    ctrl.StoreData();
+
+                    if (CheckForErrors())
+                    {
+                        ctrl.CreateTerrainData();
+                        ctrl.CopyTerrainData();
+                        //Optional step
+                        if (blend)
+                            ctrl.BlendEdges();
+                        ctrl.SetNeighbors();
+                        this.Close();
+                    }
+                    else
+                        ctrl.createPressed = false;
+                }
+                else
+                {
+                    this.ShowNotification(new GUIContent("Base Terrain must be selected."));
+                    GUIUtility.keyboardControl = 0; // Added to shift focus to original window rather than the notification
+                }
+            }
+        }
+        else
+            EditorGUILayout.LabelField("The Terrain Slicing Tool cannot operate in play mode. Exit play mode and reselect Slicing Option.");
+
+
+    }//End the OnGUI function
+
+    //Saves the current filepath stored in fileName to the key "File Path" in PlayerPrefs
+    public void SaveFilePath()
+    {
+        PlayerPrefs.SetString("File Path", ctrl.fileName);
+        label5 = new GUIContent("Reset File Path to Default: " + PlayerPrefs.GetString("File Path"), "This button simply resets the field above with the " +
+        "default file path stored in player prefs (which you can change at any time by entering a new file path above and clicking the button below this one)." +
+        "Use this if you make a mistake or need to reset the file path to the default for any reason.");
+    }
+
+    //Check for any errors with User Input
+    public bool CheckForErrors()
+    {
+        if (CtrlSliceTerrain.resolutionPerPatch < 8)
+        {
+            this.ShowNotification(new GUIContent("Resolution Per Patch must be 8 or greater"));
+            GUIUtility.keyboardControl = 0; // Added to shift focus to original window rather than the notification
+            return false;
+        }
+        else if (!Mathf.IsPowerOfTwo(CtrlSliceTerrain.resolutionPerPatch))
+        {
+            this.ShowNotification(new GUIContent("Resolution Per Patch must be a power of 2"));
+            GUIUtility.keyboardControl = 0;
+            return false;
+        }
+        else if (ctrl.newHeightMapResolution < 33)
+        {
+            this.ShowNotification(new GUIContent("Error with Heightmap Resolution - See Console for More Information"));
+            GUIUtility.keyboardControl = 0;
+            Debug.Log("The Heightmap Resolution for the new terrains must be 33 or larger. Currently it is " + ctrl.newHeightMapResolution.ToString() + ".\nThe new Heightmap Resolution is calculated as"
+            + "follows: New Resolution = ((Old Resolution - 1) / New Dimension Width) + 1 -- For example, a 4x4 grid has a New Dimension Width of 4.\n You can rectify this problem by"
+            + "either increasing the heightmap resolution of the base terrain, or reducing the number of new terrains to be created.");
+            return false;
+        }
+        else if (ctrl.newAlphaMapResolution < 16)
+        {
+            this.ShowNotification(new GUIContent("Error with AlphaMap Resolution - See Console for More Information"));
+            GUIUtility.keyboardControl = 0;
+            Debug.Log("The Alpha Map Resolution of the new terrains is too small. Value must be 16 or greater. Current value is " + ctrl.newAlphaMapResolution.ToString()
+            + ".\nPlease increase the Base Terrains alpha map resolution or reduce the number of new terrains to be created.");
+            return false;
+        }
+        else if (ctrl.newBaseMapResolution < 16)
+        {
+            this.ShowNotification(new GUIContent("Error with BaseMap Resolution - See Console for More Information"));
+            GUIUtility.keyboardControl = 0;
+            Debug.Log("The Base Map Resolution of the new terrains is too small. Value must be 16 or greater. Current value is " + ctrl.newBaseMapResolution.ToString()
+            + ".\nPlease increase the Base Terrains base map resolution or reduce the number of new terrains to be created.");
+            return false;
+        }
+        else if (ctrl.baseData.detailResolution % ctrl.size != 0)
+        {
+            this.ShowNotification(new GUIContent("Error with Detail Resolution - See Console for More Information"));
+            GUIUtility.keyboardControl = 0;
+            Debug.Log("The Base Terrains detail resolution does not divide perfectly. Please change the detail resolution or number of terrains to be created to rectify this issue.");
+            return false;
+        }
+        else if (!overwrite && AssetDatabase.LoadAssetAtPath(ctrl.fileName + "/" + CtrlSliceTerrain.baseTerrain.name + "_Data_" + 1 + "_" + 1 + ".asset", typeof(TerrainData)) != null)
+        {
+
+            this.ShowNotification(new GUIContent("Terrain Data with this name already exist. Please check 'Overwrite' if you wish to overwrite the existing Data"));
+            GUIUtility.keyboardControl = 0;
+            return false;
+        }
+        else
+            return true;
+    }
 
 }//End the MakeTerrain Class
