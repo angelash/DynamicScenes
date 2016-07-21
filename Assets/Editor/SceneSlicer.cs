@@ -30,6 +30,8 @@ public class SceneSlicerWizard : EditorWindow
 
     private GameObject m_borderNode;//用来存放分割线
     private List<GameObject> m_cellPrefabList = new List<GameObject>();
+    public CtrlSliceTerrain m_ctrl = new CtrlSliceTerrain();
+    public bool overwrite = true;
 
     private void OnGUI()
     {
@@ -81,6 +83,65 @@ public class SceneSlicerWizard : EditorWindow
         EditorGUILayout.EndScrollView();
     }
 
+    //Check for any errors with User Input
+    private bool CheckForErrors()
+    {
+        if (CtrlSliceTerrain.resolutionPerPatch < 8)
+        {
+            this.ShowNotification(new GUIContent("Resolution Per Patch must be 8 or greater"));
+            GUIUtility.keyboardControl = 0; // Added to shift focus to original window rather than the notification
+            return false;
+        }
+        else if (!Mathf.IsPowerOfTwo(CtrlSliceTerrain.resolutionPerPatch))
+        {
+            this.ShowNotification(new GUIContent("Resolution Per Patch must be a power of 2"));
+            GUIUtility.keyboardControl = 0;
+            return false;
+        }
+        else if (m_ctrl.newHeightMapResolution < 33)
+        {
+            this.ShowNotification(new GUIContent("Error with Heightmap Resolution - See Console for More Information"));
+            GUIUtility.keyboardControl = 0;
+            Debug.Log("The Heightmap Resolution for the new terrains must be 33 or larger. Currently it is " + m_ctrl.newHeightMapResolution.ToString() + ".\nThe new Heightmap Resolution is calculated as"
+            + "follows: New Resolution = ((Old Resolution - 1) / New Dimension Width) + 1 -- For example, a 4x4 grid has a New Dimension Width of 4.\n You can rectify this problem by"
+            + "either increasing the heightmap resolution of the base terrain, or reducing the number of new terrains to be created.");
+            return false;
+        }
+        else if (m_ctrl.newAlphaMapResolution < 16)
+        {
+            this.ShowNotification(new GUIContent("Error with AlphaMap Resolution - See Console for More Information"));
+            GUIUtility.keyboardControl = 0;
+            Debug.Log("The Alpha Map Resolution of the new terrains is too small. Value must be 16 or greater. Current value is " + m_ctrl.newAlphaMapResolution.ToString()
+            + ".\nPlease increase the Base Terrains alpha map resolution or reduce the number of new terrains to be created.");
+            return false;
+        }
+        else if (m_ctrl.newBaseMapResolution < 16)
+        {
+            this.ShowNotification(new GUIContent("Error with BaseMap Resolution - See Console for More Information"));
+            GUIUtility.keyboardControl = 0;
+            Debug.Log("The Base Map Resolution of the new terrains is too small. Value must be 16 or greater. Current value is " + m_ctrl.newBaseMapResolution.ToString()
+            + ".\nPlease increase the Base Terrains base map resolution or reduce the number of new terrains to be created.");
+            return false;
+        }
+        else if (m_ctrl.baseData.detailResolution % m_ctrl.size != 0)
+        {
+            this.ShowNotification(new GUIContent("Error with Detail Resolution - See Console for More Information"));
+            GUIUtility.keyboardControl = 0;
+            Debug.Log("The Base Terrains detail resolution does not divide perfectly. Please change the detail resolution or number of terrains to be created to rectify this issue.");
+            return false;
+        }
+        else if (!overwrite && AssetDatabase.LoadAssetAtPath(m_ctrl.fileName + "/" + CtrlSliceTerrain.baseTerrain.name + "_Data_" + 1 + "_" + 1 + ".asset", typeof(TerrainData)) != null)
+        {
+
+            this.ShowNotification(new GUIContent("Terrain Data with this name already exist. Please check 'Overwrite' if you wish to overwrite the existing Data"));
+            GUIUtility.keyboardControl = 0;
+            return false;
+        }
+        else
+            return true;
+    }
+
+
     private void SliceScene(GameObject scenePrefab, int dimension)
     {
         Debug.Log("dimension " + dimension);
@@ -88,136 +149,160 @@ public class SceneSlicerWizard : EditorWindow
 
         if (sceneTerrain != null)
         {
-            var startPoint = sceneTerrain.transform.position;
-            var sceneSize = sceneTerrain.terrainData.size;
+            SlicePrefab(scenePrefab, dimension, sceneTerrain);
+        }
+        else
+        {
+            Debug.Log("no Terrain");
+        }
+    }
 
-            var cellX = sceneSize.x / dimension;
-            var cellZ = sceneSize.z / dimension;
+    private void SlicePrefab(GameObject scenePrefab, int dimension, Terrain sceneTerrain)
+    {
+        var startPoint = sceneTerrain.transform.position;
+        var sceneSize = sceneTerrain.terrainData.size;
 
-            var cellPos = new Vector2[dimension, dimension];
-            var cellEndPos = new Vector2[dimension, dimension];
-            var cellPrefab = new GameObject[dimension, dimension];
-            var cellNodeDic = new Dictionary<Transform, Transform>[dimension, dimension];//单元格对应原prefab节点的映射（节点有重名）
+        var cellX = sceneSize.x / dimension;
+        var cellZ = sceneSize.z / dimension;
 
-            var rubbishNode = new GameObject();//用来存放复制节点时多出来的子节点，然后一起删掉
-            rubbishNode.name = "rubbish";
-            rubbishNode.SetActive(false);
+        var cellPos = new Vector2[dimension, dimension];
+        var cellEndPos = new Vector2[dimension, dimension];
+        var cellPrefab = new GameObject[dimension, dimension];
+        var cellNodeDic = new Dictionary<Transform, Transform>[dimension, dimension];//单元格对应原prefab节点的映射（节点有重名）
 
-            CreateBorder(startPoint, dimension, cellX, cellZ);
+        var rubbishNode = new GameObject();//用来存放复制节点时多出来的子节点，然后一起删掉
+        rubbishNode.name = "rubbish";
+        rubbishNode.SetActive(false);
 
-            CleanUpCellPrefab();
-            //初始化临时容器
-            for (int i = 0; i < dimension; i++)
+        CreateBorder(startPoint, dimension, cellX, cellZ);
+
+        CleanUpCellPrefab();
+
+        CtrlSliceTerrain.baseTerrain = sceneTerrain;
+
+        m_ctrl.createPressed = true;
+        m_ctrl.fileName = m_filePath;
+        if (!Directory.Exists(m_filePath))
+            Directory.CreateDirectory(m_filePath);
+
+        m_ctrl.StoreData();
+
+        if (CheckForErrors())
+        {
+            m_ctrl.CreateTerrainData();
+            m_ctrl.CopyTerrainData();
+            m_ctrl.SetNeighbors();
+        }
+        else
+            m_ctrl.createPressed = false;
+
+        //初始化临时容器
+        for (int i = 0; i < dimension; i++)
+        {
+            for (int j = 0; j < dimension; j++)
             {
-                for (int j = 0; j < dimension; j++)
+                cellPos[i, j] = new Vector2(startPoint.x + j * cellX, startPoint.z + i * cellZ);
+                cellEndPos[i, j] = new Vector2(startPoint.x + (j + 1) * cellX, startPoint.z + (i + 1) * cellZ);
+                var go = new GameObject();
+                go.name = string.Format("{0}_{1}_{2}", scenePrefab.name, i + 1, j + 1);
+                cellPrefab[i, j] = go;
+                m_cellPrefabList.Add(go);
+                cellNodeDic[i, j] = new Dictionary<Transform, Transform>();
+                cellNodeDic[i, j][scenePrefab.transform] = go.transform;
+            }
+        }
+
+        var children = GetAllChildren(scenePrefab.transform);
+        foreach (var child in children)
+        {
+            if (child.gameObject == sceneTerrain.gameObject)
+                continue;
+            var isConstructorNode = false;//是否为结构节点
+            //先判断是否为结构节点
+            if (child.transform.childCount != 0)
+            {
+                isConstructorNode = true;
+                if (child.gameObject.GetComponent<MeshRenderer>() != null
+                || child.gameObject.GetComponent<Light>() != null
+                || child.gameObject.GetComponent<Animator>() != null
+                || child.gameObject.GetComponent<ParticleSystem>() != null)
                 {
-                    cellPos[i, j] = new Vector2(startPoint.x + j * cellX, startPoint.z + i * cellZ);
-                    cellEndPos[i, j] = new Vector2(startPoint.x + (j + 1) * cellX, startPoint.z + (i + 1) * cellZ);
-                    var go = new GameObject();
-                    go.name = string.Format("{0}_{1}_{2}", scenePrefab.name, i + 1, j + 1);
-                    cellPrefab[i, j] = go;
-                    m_cellPrefabList.Add(go);
-                    cellNodeDic[i, j] = new Dictionary<Transform, Transform>();
-                    cellNodeDic[i, j][scenePrefab.transform] = go.transform;
+                    Debug.LogError("child contain component: " + child + " childCount: " + child.transform.childCount);//违反设定，结构节点不能作为显示元素
+                    foreach (var item in child.transform)
+                    {
+                        Debug.LogError(item);
+                    }
                 }
             }
 
-            var children = GetAllChildren(scenePrefab.transform);
-            foreach (var child in children)
+            //根据规则处理每个节点的复制
+            var hasHandle = false;
+            for (int i = 0; i < dimension; i++)
             {
-                if (child.gameObject == sceneTerrain.gameObject)
-                    continue;
-                var isConstructorNode = false;//是否为结构节点
-                //先判断是否为结构节点
-                if (child.transform.childCount != 0)
+                if (hasHandle)
+                    break;
+                for (int j = 0; j < dimension; j++)
                 {
-                    isConstructorNode = true;
-                    if (child.gameObject.GetComponent<MeshRenderer>() != null
-                    || child.gameObject.GetComponent<Light>() != null
-                    || child.gameObject.GetComponent<Animator>() != null
-                    || child.gameObject.GetComponent<ParticleSystem>() != null)
+                    if (isConstructorNode)//结构节点每个单元格都加上去
                     {
-                        Debug.LogError("child contain component: " + child + " childCount: " + child.transform.childCount);//违反设定，结构节点不能作为显示元素
-                        foreach (var item in child.transform)
-                        {
-                            Debug.LogError(item);
-                        }
+                        var node = GameObject.Instantiate(child);
+                        CleanUpNewTran(node, rubbishNode.transform);
+                        node.name = child.name;
+                        node.transform.parent = FindCellPrefabParentByTargetTran(child, cellPrefab[i, j].transform, cellNodeDic[i, j]);
+                        CopyTranInfo(child, node);
+                        cellNodeDic[i, j][child] = node;
                     }
-                }
-
-                //根据规则处理每个节点的复制
-                var hasHandle = false;
-                for (int i = 0; i < dimension; i++)
-                {
-                    if (hasHandle)
-                        break;
-                    for (int j = 0; j < dimension; j++)
-                    {
-                        if (isConstructorNode)//结构节点每个单元格都加上去
+                    else
+                    {//显示节点需要按照坐标分配
+                        var x = child.position.x;
+                        var z = child.position.z;
+                        if (cellPos[i, j].x < x && x < cellEndPos[i, j].x && cellPos[i, j].y < z && z < cellEndPos[i, j].y)
                         {
                             var node = GameObject.Instantiate(child);
                             CleanUpNewTran(node, rubbishNode.transform);
                             node.name = child.name;
                             node.transform.parent = FindCellPrefabParentByTargetTran(child, cellPrefab[i, j].transform, cellNodeDic[i, j]);
                             CopyTranInfo(child, node);
-                            cellNodeDic[i, j][child] = node;
-                        }
-                        else
-                        {//显示节点需要按照坐标分配
-                            var x = child.position.x;
-                            var z = child.position.z;
-                            if (cellPos[i, j].x < x && x < cellEndPos[i, j].x && cellPos[i, j].y < z && z < cellEndPos[i, j].y)
-                            {
-                                var node = GameObject.Instantiate(child);
-                                CleanUpNewTran(node, rubbishNode.transform);
-                                node.name = child.name;
-                                node.transform.parent = FindCellPrefabParentByTargetTran(child, cellPrefab[i, j].transform, cellNodeDic[i, j]);
-                                CopyTranInfo(child, node);
-                                hasHandle = true;
-                                break;
-                            }
+                            hasHandle = true;
+                            break;
                         }
                     }
                 }
             }
-            Debug.Log("children " + children.Count);
-
-            Debug.Log(sceneTerrain + " " + startPoint + " " + sceneSize);
-
-            GameObject.DestroyImmediate(rubbishNode);
-
-            //保存切割后prefab
-            for (int i = 0; i < m_cellPrefabList.Count; i++)
-            {
-                var item = m_cellPrefabList[i];
-                var prefabPath = string.Concat(m_filePath, "/", item.name, ".prefab");
-                if (!Directory.Exists(m_filePath))
-                    Directory.CreateDirectory(m_filePath);
-                PrefabUtility.CreatePrefab(prefabPath, item);
-                m_cellPrefabList[i] = PrefabUtility.ConnectGameObjectToPrefab(item, AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath));
-            }
-            AssetDatabase.SaveAssets();
-
-            //复制一份到新建的独立场景中
-            for (int i = 0; i < m_cellPrefabList.Count; i++)
-            {
-                var item = m_cellPrefabList[i];
-                var prefabPath = string.Concat(m_filePath, "/", item.name, ".prefab");
-                var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
-                var go = GameObject.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath));
-                EditorSceneManager.SaveScene(scene, string.Concat(m_filePath, "/", item.name, ".unity"));
-            }
-
-            //删除原来的prefab实例
-            for (int i = 0; i < m_cellPrefabList.Count; i++)
-            {
-                GameObject.DestroyImmediate(m_cellPrefabList[i]);
-            }
-
         }
-        else
+        Debug.Log("children " + children.Count);
+
+        Debug.Log(sceneTerrain + " " + startPoint + " " + sceneSize);
+
+        GameObject.DestroyImmediate(rubbishNode);
+
+        //保存切割后prefab
+        for (int i = 0; i < m_cellPrefabList.Count; i++)
         {
-            Debug.Log("no Terrain");
+            var item = m_cellPrefabList[i];
+            m_ctrl.terrainGameObjects[i].transform.parent = item.transform;
+            var prefabPath = string.Concat(m_filePath, "/", item.name, ".prefab");
+            if (!Directory.Exists(m_filePath))
+                Directory.CreateDirectory(m_filePath);
+            PrefabUtility.CreatePrefab(prefabPath, item);
+            m_cellPrefabList[i] = PrefabUtility.ConnectGameObjectToPrefab(item, AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath));
+        }
+        AssetDatabase.SaveAssets();
+
+        //复制一份到新建的独立场景中
+        for (int i = 0; i < m_cellPrefabList.Count; i++)
+        {
+            var item = m_cellPrefabList[i];
+            var prefabPath = string.Concat(m_filePath, "/", item.name, ".prefab");
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+            var go = GameObject.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath));
+            EditorSceneManager.SaveScene(scene, string.Concat(m_filePath, "/", item.name, ".unity"));
+        }
+
+        //删除原来的prefab实例
+        for (int i = 0; i < m_cellPrefabList.Count; i++)
+        {
+            GameObject.DestroyImmediate(m_cellPrefabList[i]);
         }
     }
 

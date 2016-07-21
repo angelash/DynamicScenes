@@ -181,7 +181,7 @@ public class CtrlSliceTerrain
         {
             for (x = 0; x < terrainsWide; x++)
             {
-                AssetDatabase.CreateAsset(new TerrainData(), fileName + "/" + baseTerrain.name + "_Data_" + (y + 1) + "_" + (x + 1) + ".asset");
+                AssetDatabase.CreateAsset(new TerrainData(), fileName + "/" + baseTerrain.name + (y + 1) + "_" + (x + 1) + ".asset");
                 progress += progressScale;
                 EditorUtility.DisplayProgressBar("Progress", "Generating Terrains", progress);
             }
@@ -197,9 +197,9 @@ public class CtrlSliceTerrain
         {
             for (x = 0; x < terrainsWide; x++)
             {
-                terrainGameObjects[arrayPos] = Terrain.CreateTerrainGameObject(AssetDatabase.LoadAssetAtPath(fileName + "/" + baseTerrain.name + "_Data_" + (y + 1) + "_" + (x + 1) + ".asset", typeof(TerrainData)) as TerrainData);
+                terrainGameObjects[arrayPos] = Terrain.CreateTerrainGameObject(AssetDatabase.LoadAssetAtPath(fileName + "/" + baseTerrain.name + (y + 1) + "_" + (x + 1) + ".asset", typeof(TerrainData)) as TerrainData);
 
-                terrainGameObjects[arrayPos].name = baseTerrain.name + "_Slice_" + (y + 1) + "_" + (x + 1);
+                terrainGameObjects[arrayPos].name = baseTerrain.name + (y + 1) + "_" + (x + 1);
 
                 terrains[arrayPos] = terrainGameObjects[arrayPos].GetComponent<Terrain>();
 
@@ -845,7 +845,7 @@ public class SliceTerrain : EditorWindow
             Debug.Log("The Base Terrains detail resolution does not divide perfectly. Please change the detail resolution or number of terrains to be created to rectify this issue.");
             return false;
         }
-        else if (!overwrite && AssetDatabase.LoadAssetAtPath(ctrl.fileName + "/" + CtrlSliceTerrain.baseTerrain.name + "_Data_" + 1 + "_" + 1 + ".asset", typeof(TerrainData)) != null)
+        else if (!overwrite && AssetDatabase.LoadAssetAtPath(ctrl.fileName + "/" + CtrlSliceTerrain.baseTerrain.name + 1 + "_" + 1 + ".asset", typeof(TerrainData)) != null)
         {
 
             this.ShowNotification(new GUIContent("Terrain Data with this name already exist. Please check 'Overwrite' if you wish to overwrite the existing Data"));
