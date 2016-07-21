@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using System.Collections;
@@ -30,6 +31,7 @@ public class SceneSlicerWizard : EditorWindow
 
     private GameObject m_borderNode;//用来存放分割线
     private List<GameObject> m_cellPrefabList = new List<GameObject>();
+    private List<Scene> m_cellSceneList = new List<Scene>();
     public CtrlSliceTerrain m_ctrl = new CtrlSliceTerrain();
     public bool overwrite = true;
 
@@ -293,7 +295,9 @@ public class SceneSlicerWizard : EditorWindow
             var item = m_cellPrefabList[i];
             var prefabPath = string.Concat(m_filePath, "/", item.name, ".prefab");
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+            m_cellSceneList.Add(scene);
             var go = GameObject.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath));
+            go.name = item.name;
             EditorSceneManager.SaveScene(scene, string.Concat(m_filePath, "/", item.name, ".unity"));
         }
 
@@ -400,6 +404,11 @@ public class SceneSlicerWizard : EditorWindow
             }
         }
         m_cellPrefabList.Clear();
+        foreach (var item in m_cellSceneList)
+        {
+            EditorSceneManager.CloseScene(item, true);
+        }
+        m_cellSceneList.Clear();
         if (Directory.Exists(m_filePath))
         {
             Directory.Delete(m_filePath, true);
