@@ -149,7 +149,16 @@ public class SceneSlicerWizard : EditorWindow
 
         if (sceneTerrain != null)
         {
-            SlicePrefab(scenePrefab, dimension, sceneTerrain);
+            CtrlSliceTerrain.baseTerrain = sceneTerrain;
+            m_ctrl.fileName = m_filePath;
+            m_ctrl.StoreData();
+            m_ctrl.createPressed = true;
+            if (CheckForErrors())
+            {
+                SlicePrefab(scenePrefab, dimension, sceneTerrain);
+            }
+            else
+                m_ctrl.createPressed = false;
         }
         else
         {
@@ -178,23 +187,12 @@ public class SceneSlicerWizard : EditorWindow
 
         CleanUpCellPrefab();
 
-        CtrlSliceTerrain.baseTerrain = sceneTerrain;
-
-        m_ctrl.createPressed = true;
-        m_ctrl.fileName = m_filePath;
         if (!Directory.Exists(m_filePath))
             Directory.CreateDirectory(m_filePath);
 
-        m_ctrl.StoreData();
-
-        if (CheckForErrors())
-        {
-            m_ctrl.CreateTerrainData();
-            m_ctrl.CopyTerrainData();
-            m_ctrl.SetNeighbors();
-        }
-        else
-            m_ctrl.createPressed = false;
+        m_ctrl.CreateTerrainData();
+        m_ctrl.CopyTerrainData();
+        m_ctrl.SetNeighbors();
 
         //初始化临时容器
         for (int i = 0; i < dimension; i++)
