@@ -632,7 +632,7 @@ public class SliceTerrain : EditorWindow
     public GUIContent label9;
     public GUIContent label10;
 
-    [MenuItem("SceneSlicer/Slice Terrain")]
+    //[MenuItem("SceneSlicer/Slice Terrain")]
     static void ShowWindow()
     {
         var window = EditorWindow.GetWindow<SliceTerrain>();

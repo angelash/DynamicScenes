@@ -80,6 +80,25 @@ public class SceneSlicerWizard : EditorWindow
         {
             NormalizePrefab(m_scenePrefab);
         }
+        EditorGUILayout.Separator();
+        EditorGUILayout.BeginHorizontal();
+        if (GUILayout.Button("Load Scenes"))
+        {
+            LoadScenes();
+        }
+        if (GUILayout.Button("UnLoad Scenes"))
+        {
+            UnloadScenes();
+        }
+        if (GUILayout.Button("Load Prefabs"))
+        {
+            LoadPrefabs();
+        }
+        if (GUILayout.Button("UnLoad Prefabs"))
+        {
+            UnloadPrefabs();
+        }
+        EditorGUILayout.EndHorizontal();
 
         EditorGUILayout.EndVertical();
         EditorGUILayout.EndScrollView();
@@ -143,6 +162,55 @@ public class SceneSlicerWizard : EditorWindow
             return true;
     }
 
+    private void LoadPrefabs()
+    {
+        if (m_cellSceneList.Count == 0)
+        {
+            LoadScenes();
+        }
+        else
+        {
+            foreach (var scene in m_cellSceneList)
+            {
+                var gos = scene.GetRootGameObjects();
+                if (gos.Length > 0)
+                {
+                    if (!m_cellPrefabList.Contains(gos[0]))
+                        m_cellPrefabList.Add(gos[0]);
+                }
+                else
+                {
+                    EditorSceneManager.SetActiveScene(scene);
+                    var prefabPath = string.Concat(m_filePath, "/", scene.name, ".prefab");
+                    var go = GameObject.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath));
+                    go.name = scene.name;
+                    if (!m_cellPrefabList.Contains(go))
+                        m_cellPrefabList.Add(go);
+                    EditorSceneManager.MarkSceneDirty(scene);
+                }
+            }
+        }
+        Debug.Log("Loaded Prefabs: " + m_cellPrefabList.Count);
+    }
+
+    private void LoadScenes()
+    {
+        var files = Directory.GetFiles(m_filePath, "*.unity");
+        foreach (var item in files)
+        {
+            var path = FullPath2AssetPath(item);
+            var scene = EditorSceneManager.OpenScene(path, OpenSceneMode.Additive);
+            var gos = scene.GetRootGameObjects();
+            if (gos.Length > 0)
+            {
+                if (!m_cellPrefabList.Contains(gos[0]))
+                    m_cellPrefabList.Add(gos[0]);
+            }
+            if (!m_cellSceneList.Contains(scene))
+                m_cellSceneList.Add(scene);
+        }
+        Debug.Log("Loaded Scenes: " + m_cellSceneList.Count);
+    }
 
     private void SliceScene(GameObject scenePrefab, int dimension)
     {
@@ -395,25 +463,38 @@ public class SceneSlicerWizard : EditorWindow
 
     private void CleanUpCellPrefab()
     {
+        UnloadPrefabs();
+        UnloadScenes();
+        if (Directory.Exists(m_filePath))
+        {
+            Directory.Delete(m_filePath, true);
+            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
+        }
+    }
+
+    private void UnloadPrefabs()
+    {
         foreach (var item in m_cellPrefabList)
         {
             if (item)
             {
-                AssetDatabase.DeleteAsset(string.Concat(m_filePath, "/", item.name, ".prefab"));
                 GameObject.DestroyImmediate(item);
             }
         }
         m_cellPrefabList.Clear();
         foreach (var item in m_cellSceneList)
         {
+            EditorSceneManager.MarkSceneDirty(item);
+        }
+    }
+
+    private void UnloadScenes()
+    {
+        foreach (var item in m_cellSceneList)
+        {
             EditorSceneManager.CloseScene(item, true);
         }
         m_cellSceneList.Clear();
-        if (Directory.Exists(m_filePath))
-        {
-            Directory.Delete(m_filePath, true);
-            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
-        }
     }
 
     private void CleanUpNewTran(Transform node, Transform rubbishNode)
@@ -447,5 +528,10 @@ public class SceneSlicerWizard : EditorWindow
             children.AddRange(GetAllChildren(item));
         }
         return children;
+    }
+
+    private string FullPath2AssetPath(string fullPath)
+    {
+        return fullPath.Replace("\\", "/").Replace(Application.dataPath, "Assets");
     }
 }
