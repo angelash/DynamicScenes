@@ -221,6 +221,7 @@ public class SceneSlicerWizard : EditorWindow
         {
             CtrlSliceTerrain.baseTerrain = sceneTerrain;
             m_ctrl.fileName = m_filePath;
+            CtrlSliceTerrain.enumValue = (Size)dimension;
             m_ctrl.StoreData();
             m_ctrl.createPressed = true;
             if (CheckForErrors())
