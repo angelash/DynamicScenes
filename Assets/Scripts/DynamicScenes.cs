@@ -1,20 +1,9 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 public class DynamicScenes : MonoBehaviour
 {
-
-    // Use this for initialization
-    void Start()
-    {
-
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-
-    }
 
     Canvas MapSurface;
     int mapSectionWidth, mapSectionHeight, mapSectionXNum, mapSectionYNum;
@@ -269,3 +258,16 @@ public class DynamicScenes : MonoBehaviour
     //}
 }
 
+public class SceneData
+{
+    public int Id { get; set; }
+    public List<SceneCellData> Cells = new List<SceneCellData>();
+}
+
+public class SceneCellData
+{
+    public int X { get; set; }
+    public int Y { get; set; }
+    public string PrefabName { get; set; }
+    public string UnityName { get; set; }
+}
