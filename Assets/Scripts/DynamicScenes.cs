@@ -4,9 +4,41 @@ using System.Collections.Generic;
 
 public class DynamicScenes : MonoBehaviour
 {
+    private SceneData m_sceneData;
+    public Transform m_avatar;
 
     Canvas MapSurface;
     int mapSectionWidth, mapSectionHeight, mapSectionXNum, mapSectionYNum;
+
+    void Start()
+    {
+        m_sceneData = new SceneData() { Id = 1 };
+        m_sceneData.Cells = new List<SceneCellData>();
+
+        for (int i = 0; i < 8; i++)
+        {
+            for (int j = 0; j < 8; j++)
+            {
+                var cell = new SceneCellData();
+                cell.X = j * 500;
+                cell.Y = i * 500;
+                cell.PrefabName = string.Format("Demo01_{0}_{1}.prefab", i + 1, j + 1);
+                cell.UnityName = string.Format("Demo01_{0}_{1}.unity", i + 1, j + 1);
+                m_sceneData.Cells.Add(cell);
+            }
+        }
+    }
+
+    float counter;
+    void Update()
+    {
+        counter += Time.deltaTime;
+        if (counter > 1)
+        {
+            counter = 0;
+            ChangeMapSection();
+        }
+    }
 
     int _leaderSectionX;
     /// <summary>
