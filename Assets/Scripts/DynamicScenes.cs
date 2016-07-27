@@ -62,6 +62,7 @@ public class DynamicScenes : MonoBehaviour
             currentStartY = leaderSectionY * mapSectionHeight;
             currentEndX = currentStartX + mapSectionWidth;
             currentEndY = currentStartY + mapSectionHeight;
+            ChangeMapSection();
 
             Debug.Log(leaderSectionX + " " + leaderSectionY);
         }
@@ -74,7 +75,7 @@ public class DynamicScenes : MonoBehaviour
     public int leaderSectionX
     {
         get { return _leaderSectionX; }
-        set { if (_leaderSectionX != value) { _leaderSectionX = value; ChangeMapSection(); } }
+        set { _leaderSectionX = value; }
     }
     int _leaderSectionY;
     /// <summary>
@@ -83,7 +84,7 @@ public class DynamicScenes : MonoBehaviour
     public int leaderSectionY
     {
         get { return _leaderSectionY; }
-        set { if (_leaderSectionY != value) { _leaderSectionY = value; ChangeMapSection(); } }
+        set { _leaderSectionY = value; }
     }
 
     //Image mapSection;
@@ -106,6 +107,7 @@ public class DynamicScenes : MonoBehaviour
             startSectionX = leaderSectionX - 1;
             endSectionX = leaderSectionX + 1;
         }
+
         if (leaderSectionY == 0)
         {
             startSectionY = 0;
@@ -121,6 +123,7 @@ public class DynamicScenes : MonoBehaviour
             startSectionY = leaderSectionY - 1;
             endSectionY = leaderSectionY + 1;
         }
+
         var sb = new StringBuilder();
         waitForRemove.Clear();
         waitForRemove.AddRange(loadedSceneCell);
@@ -132,27 +135,38 @@ public class DynamicScenes : MonoBehaviour
                 sb.AppendFormat("{0},{1}; ", x, y);
                 var cell = m_sceneData.Cells[y, x];
                 waitForRemove.Remove(cell);
-                LoadScene(cell);
                 loadedSceneCell.Add(cell);
             }
         }
+        UpdateSceneModel();
+        Debug.Log(sb.ToString());
+        Debug.Log("waitForRemove: " + waitForRemove.Count);
+    }
+
+    void UpdateSceneModel()
+    {
         for (int i = 0; i < waitForRemove.Count; i++)
         {
             UnloadScene(waitForRemove[i]);
         }
-        Debug.Log(sb.ToString());
+        for (int i = 0; i < loadedSceneCell.Count; i++)
+        {
+            StartCoroutine(LoadScene(loadedSceneCell[i]));
+        }
     }
 
     List<SceneCellData> loadedSceneCell = new List<SceneCellData>();
     List<SceneCellData> waitForRemove = new List<SceneCellData>();
 
-    private void LoadScene(SceneCellData scene)
+    private IEnumerator LoadScene(SceneCellData scene)
     {
         if (!scene.Loaded)
         {
-            var prefab = Resources.Load<GameObject>("Demo01/Demo01/" + scene.PrefabName);
-            scene.Prefab = GameObject.Instantiate(prefab);
-            SceneManager.LoadScene(scene.SceneName, LoadSceneMode.Additive);
+            yield return SceneManager.LoadSceneAsync(scene.SceneName, LoadSceneMode.Additive);
+
+            var async = Resources.LoadAsync<GameObject>("Demo01/Demo01/" + scene.PrefabName);
+            yield return async;
+            scene.Prefab = GameObject.Instantiate(async.asset) as GameObject;
             scene.Loaded = true;
         }
     }
