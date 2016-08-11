@@ -19,12 +19,12 @@ public class DynamicScenes : MonoBehaviour
         mapSectionXNum = 8;
         mapSectionYNum = 8;
         m_sceneData = new SceneData() { Id = 1, Width = 4000, Height = 4000 };
-        m_sceneData.Cells = new SceneCellData[mapSectionXNum, mapSectionYNum];
+        m_sceneData.Cells = new ZoneData[mapSectionXNum, mapSectionYNum];
         for (int i = 0; i < mapSectionXNum; i++)
         {
             for (int j = 0; j < mapSectionYNum; j++)
             {
-                var cell = new SceneCellData();
+                var cell = new ZoneData();
                 cell.X = j * 500;
                 cell.Y = i * 500;
                 cell.PrefabName = string.Format("Demo01_{0}_{1}", i + 1, j + 1);
@@ -125,53 +125,77 @@ public class DynamicScenes : MonoBehaviour
         }
 
         var sb = new StringBuilder();
-        waitForRemove.Clear();
-        waitForRemove.AddRange(loadedSceneCell);
-        loadedSceneCell.Clear();
+        m_waitForRemove.Clear();
+        m_waitForRemove.AddRange(m_loadedZones);
+        m_loadedZones.Clear();
         for (int x = startSectionX; x <= endSectionX; x++)
         {
             for (int y = startSectionY; y <= endSectionY; y++)
             {
                 sb.AppendFormat("{0},{1}; ", x, y);
                 var cell = m_sceneData.Cells[y, x];
-                waitForRemove.Remove(cell);
-                loadedSceneCell.Add(cell);
+                m_waitForRemove.Remove(cell);
+                m_loadedZones.Add(cell);
             }
         }
         UpdateSceneModel();
         Debug.Log(sb.ToString());
-        Debug.Log("waitForRemove: " + waitForRemove.Count);
+        Debug.Log("waitForRemove: " + m_waitForRemove.Count);
     }
 
+    int m_loadCounter;
     void UpdateSceneModel()
     {
-        for (int i = 0; i < waitForRemove.Count; i++)
+        for (int i = 0; i < m_waitForRemove.Count; i++)
         {
-            UnloadScene(waitForRemove[i]);
+            UnloadScene(m_waitForRemove[i]);
         }
-        for (int i = 0; i < loadedSceneCell.Count; i++)
+        m_loadCounter = 0;
+        for (int i = 0; i < m_loadedZones.Count; i++)
         {
-            StartCoroutine(LoadScene(loadedSceneCell[i]));
+            StartCoroutine(LoadZone(m_loadedZones[i], m_loadedZones.Count));
         }
     }
 
-    List<SceneCellData> loadedSceneCell = new List<SceneCellData>();
-    List<SceneCellData> waitForRemove = new List<SceneCellData>();
+    List<ZoneData> m_loadedZones = new List<ZoneData>();
+    List<ZoneData> m_waitForRemove = new List<ZoneData>();
 
-    private IEnumerator LoadScene(SceneCellData scene)
+    private IEnumerator LoadZone(ZoneData zone, int total)
     {
-        if (!scene.Loaded)
+        if (!zone.Loaded)
         {
-            yield return SceneManager.LoadSceneAsync(scene.SceneName, LoadSceneMode.Additive);
+            yield return SceneManager.LoadSceneAsync(zone.SceneName, LoadSceneMode.Additive);
 
-            var async = Resources.LoadAsync<GameObject>("Demo01/Demo01/" + scene.PrefabName);
+            var async = Resources.LoadAsync<GameObject>("Demo01/Demo01/" + zone.PrefabName);
             yield return async;
-            scene.Prefab = GameObject.Instantiate(async.asset) as GameObject;
-            scene.Loaded = true;
+            zone.Prefab = GameObject.Instantiate(async.asset) as GameObject;
+            var x = (zone.X / 500 + 1);
+            var y = (zone.Y / 500 + 1);
+            //Debug.Log("Terrain" + (zone.Y / 500 + 1) + "_" + (zone.X / 500 + 1));
+            var terr = zone.Prefab.transform.FindChild("Terrain" + y + "_" + x);
+            zone.Terrain = terr.GetComponent<Terrain>();
+            zone.Loaded = true;
+        }
+        m_loadCounter++;
+        if (m_loadCounter >= total)
+        {
+            for (int i = 0; i < m_loadedZones.Count; i++)
+            {
+                var loadedZone = m_loadedZones[i];
+                var x = (loadedZone.X / 500);
+                var y = (loadedZone.Y / 500);
+
+                Terrain left = GetLoadedTerrain(x - 1, y);
+                Terrain right = GetLoadedTerrain(x + 1, y);
+                Terrain top = GetLoadedTerrain(x, y + 1);
+                Terrain bottom = GetLoadedTerrain(x, y - 1);
+
+                loadedZone.Terrain.SetNeighbors(left, top, right, bottom);
+            }
         }
     }
 
-    private void UnloadScene(SceneCellData scene)
+    private void UnloadScene(ZoneData scene)
     {
         if (scene.Loaded)
         {
@@ -180,6 +204,19 @@ public class DynamicScenes : MonoBehaviour
             scene.Loaded = false;
         }
     }
+
+    private Terrain GetLoadedTerrain(int x, int y)
+    {
+        if ((x >= 0 && x < mapSectionXNum) && (y >= 0 && y < mapSectionYNum))
+        {
+            var zone = m_sceneData.Cells[y, x];
+            if (zone.Loaded)
+                return zone.Terrain;
+        }
+
+        return null;
+    }
+
 }
 
 public class SceneData
@@ -187,10 +224,10 @@ public class SceneData
     public int Id { get; set; }
     public float Width { get; set; }
     public float Height { get; set; }
-    public SceneCellData[,] Cells;
+    public ZoneData[,] Cells;
 }
 
-public class SceneCellData
+public class ZoneData
 {
     public int X { get; set; }
     public int Y { get; set; }
@@ -199,4 +236,5 @@ public class SceneCellData
     public bool Loaded { get; set; }
     public GameObject Prefab { get; set; }
     public Scene Scene { get; set; }
+    public Terrain Terrain { get; set; }
 }
