@@ -17,6 +17,7 @@ public class DynamicScenes : MonoBehaviour
 
     private int m_loadCounter;
     private float m_updateCounter;
+    private int m_loadRange = 1;
     private int m_centerZoneX, m_centerZoneY;
     private int m_startZoneX, m_startZoneY, m_endZoneX, m_endZoneY;
     private float currentStartX, currentStartY, currentEndX, currentEndY;
@@ -93,37 +94,10 @@ public class DynamicScenes : MonoBehaviour
 
     private void ChangeMapZones()
     {
-        if (CenterZoneX == 0)
-        {
-            m_startZoneX = 0;
-            m_endZoneX = 2;
-        }
-        else if (CenterZoneX == mapSectionXNum - 1)
-        {
-            m_startZoneX = CenterZoneX - 2;
-            m_endZoneX = CenterZoneX;
-        }
-        else
-        {
-            m_startZoneX = CenterZoneX - 1;
-            m_endZoneX = CenterZoneX + 1;
-        }
-
-        if (CenterZoneY == 0)
-        {
-            m_startZoneY = 0;
-            m_endZoneY = 2;
-        }
-        else if (CenterZoneY == mapSectionYNum - 1)
-        {
-            m_startZoneY = CenterZoneY - 2;
-            m_endZoneY = CenterZoneY;
-        }
-        else
-        {
-            m_startZoneY = CenterZoneY - 1;
-            m_endZoneY = CenterZoneY + 1;
-        }
+        m_startZoneX = Mathf.Max(CenterZoneX - m_loadRange, 0);
+        m_endZoneX = Mathf.Min(CenterZoneX + m_loadRange, mapSectionXNum - 1);
+        m_startZoneY = Mathf.Max(CenterZoneY - m_loadRange, 0);
+        m_endZoneY = Mathf.Min(CenterZoneY + m_loadRange, mapSectionYNum - 1);
 
         var sb = new StringBuilder();
         m_waitForRemove.Clear();
