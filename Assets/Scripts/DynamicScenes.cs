@@ -10,12 +10,38 @@ public class DynamicScenes : MonoBehaviour
     private SceneData m_sceneData;
     public Transform m_avatar;
 
-    int mapSectionWidth, mapSectionHeight, mapSectionXNum, mapSectionYNum;
+    private int mapCenterWidth, mapCenterHeight, mapSectionXNum, mapSectionYNum;
+
+    private List<ZoneData> m_loadedZones = new List<ZoneData>();
+    private List<ZoneData> m_waitForRemove = new List<ZoneData>();
+
+    private int m_loadCounter;
+    private float m_updateCounter;
+    private int m_centerZoneX, m_centerZoneY;
+    private int m_startZoneX, m_startZoneY, m_endZoneX, m_endZoneY;
+    private float currentStartX, currentStartY, currentEndX, currentEndY;
+
+    /// <summary>
+    /// 主角所处的切片X值
+    /// </summary>
+    public int CenterZoneX
+    {
+        get { return m_centerZoneX; }
+        set { m_centerZoneX = value; }
+    }
+    /// <summary>
+    /// 主角所处的切片Y值
+    /// </summary>
+    public int CenterZoneY
+    {
+        get { return m_centerZoneY; }
+        set { m_centerZoneY = value; }
+    }
 
     void Start()
     {
-        mapSectionWidth = 500;
-        mapSectionHeight = 500;
+        mapCenterWidth = 500;
+        mapCenterHeight = 500;
         mapSectionXNum = 8;
         mapSectionYNum = 8;
         m_sceneData = new SceneData() { Id = 1, Width = 4000, Height = 4000 };
@@ -34,20 +60,17 @@ public class DynamicScenes : MonoBehaviour
         }
     }
 
-    float counter;
     void Update()
     {
-        counter += Time.deltaTime;
-        if (counter > 1)
+        m_updateCounter += Time.deltaTime;
+        if (m_updateCounter > 1)
         {
-            counter = 0;
-            UpdateAvatarSection();
+            m_updateCounter = 0;
+            UpdateAvatarZone();
         }
     }
 
-    float currentStartX, currentStartY, currentEndX, currentEndY;
-
-    void UpdateAvatarSection()
+    private void UpdateAvatarZone()
     {
         var pos = m_avatar.position;
         if (currentStartX < pos.x && pos.x < currentEndX && currentStartY < pos.z && pos.z < currentEndY)
@@ -56,81 +79,59 @@ public class DynamicScenes : MonoBehaviour
         }
         else
         {
-            leaderSectionX = (int)Math.Floor(pos.x / mapSectionWidth);
-            leaderSectionY = (int)Math.Floor(pos.z / mapSectionHeight);
-            currentStartX = leaderSectionX * mapSectionWidth;
-            currentStartY = leaderSectionY * mapSectionHeight;
-            currentEndX = currentStartX + mapSectionWidth;
-            currentEndY = currentStartY + mapSectionHeight;
-            ChangeMapSection();
+            CenterZoneX = (int)Math.Floor(pos.x / mapCenterWidth);
+            CenterZoneY = (int)Math.Floor(pos.z / mapCenterHeight);
+            currentStartX = CenterZoneX * mapCenterWidth;
+            currentStartY = CenterZoneY * mapCenterHeight;
+            currentEndX = currentStartX + mapCenterWidth;
+            currentEndY = currentStartY + mapCenterHeight;
+            ChangeMapZones();
 
-            Debug.Log(leaderSectionX + " " + leaderSectionY);
+            Debug.Log(CenterZoneX + " " + CenterZoneY);
         }
     }
 
-    int _leaderSectionX;
-    /// <summary>
-    /// 主角所处的切片X值
-    /// </summary>
-    public int leaderSectionX
+    private void ChangeMapZones()
     {
-        get { return _leaderSectionX; }
-        set { _leaderSectionX = value; }
-    }
-    int _leaderSectionY;
-    /// <summary>
-    /// 主角所处的切片Y值
-    /// </summary>
-    public int leaderSectionY
-    {
-        get { return _leaderSectionY; }
-        set { _leaderSectionY = value; }
-    }
-
-    //Image mapSection;
-    int startSectionX, startSectionY, endSectionX, endSectionY;
-
-    private void ChangeMapSection()
-    {
-        if (leaderSectionX == 0)
+        if (CenterZoneX == 0)
         {
-            startSectionX = 0;
-            endSectionX = 2;
+            m_startZoneX = 0;
+            m_endZoneX = 2;
         }
-        else if (leaderSectionX == mapSectionXNum - 1)
+        else if (CenterZoneX == mapSectionXNum - 1)
         {
-            startSectionX = leaderSectionX - 2;
-            endSectionX = leaderSectionX;
+            m_startZoneX = CenterZoneX - 2;
+            m_endZoneX = CenterZoneX;
         }
         else
         {
-            startSectionX = leaderSectionX - 1;
-            endSectionX = leaderSectionX + 1;
+            m_startZoneX = CenterZoneX - 1;
+            m_endZoneX = CenterZoneX + 1;
         }
 
-        if (leaderSectionY == 0)
+        if (CenterZoneY == 0)
         {
-            startSectionY = 0;
-            endSectionY = 2;
+            m_startZoneY = 0;
+            m_endZoneY = 2;
         }
-        else if (leaderSectionY == mapSectionYNum - 1)
+        else if (CenterZoneY == mapSectionYNum - 1)
         {
-            startSectionY = leaderSectionY - 2;
-            endSectionY = leaderSectionY;
+            m_startZoneY = CenterZoneY - 2;
+            m_endZoneY = CenterZoneY;
         }
         else
         {
-            startSectionY = leaderSectionY - 1;
-            endSectionY = leaderSectionY + 1;
+            m_startZoneY = CenterZoneY - 1;
+            m_endZoneY = CenterZoneY + 1;
         }
 
         var sb = new StringBuilder();
         m_waitForRemove.Clear();
         m_waitForRemove.AddRange(m_loadedZones);
         m_loadedZones.Clear();
-        for (int x = startSectionX; x <= endSectionX; x++)
+        for (int x = m_startZoneX; x <= m_endZoneX; x++)
         {
-            for (int y = startSectionY; y <= endSectionY; y++)
+            for (int y = m_startZoneY; y <= m_endZoneY; y++)
             {
                 sb.AppendFormat("{0},{1}; ", x, y);
                 var cell = m_sceneData.Cells[y, x];
@@ -143,8 +144,7 @@ public class DynamicScenes : MonoBehaviour
         Debug.Log("waitForRemove: " + m_waitForRemove.Count);
     }
 
-    int m_loadCounter;
-    void UpdateSceneModel()
+    private void UpdateSceneModel()
     {
         for (int i = 0; i < m_waitForRemove.Count; i++)
         {
@@ -156,9 +156,6 @@ public class DynamicScenes : MonoBehaviour
             StartCoroutine(LoadZone(m_loadedZones[i], m_loadedZones.Count));
         }
     }
-
-    List<ZoneData> m_loadedZones = new List<ZoneData>();
-    List<ZoneData> m_waitForRemove = new List<ZoneData>();
 
     private IEnumerator LoadZone(ZoneData zone, int total)
     {
@@ -216,7 +213,6 @@ public class DynamicScenes : MonoBehaviour
 
         return null;
     }
-
 }
 
 public class SceneData
