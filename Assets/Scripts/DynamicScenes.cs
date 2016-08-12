@@ -17,7 +17,7 @@ public class DynamicScenes : MonoBehaviour
 
     private int m_loadCounter;
     private float m_updateCounter;
-    private int m_loadRange = 1;
+    private int m_loadRange = 2;
     private int m_centerZoneX, m_centerZoneY;
     private int m_startZoneX, m_startZoneY, m_endZoneX, m_endZoneY;
     private float currentStartX, currentStartY, currentEndX, currentEndY;
@@ -52,8 +52,8 @@ public class DynamicScenes : MonoBehaviour
             for (int j = 0; j < mapSectionYNum; j++)
             {
                 var cell = new ZoneData();
-                cell.X = j * 500;
-                cell.Y = i * 500;
+                cell.X = j;
+                cell.Y = i;
                 cell.PrefabName = string.Format("Demo01_{0}_{1}", i + 1, j + 1);
                 cell.SceneName = string.Format("Demo01_{0}_{1}", i + 1, j + 1);
                 m_sceneData.Cells[i, j] = cell;
@@ -140,8 +140,8 @@ public class DynamicScenes : MonoBehaviour
             var async = Resources.LoadAsync<GameObject>("Demo01/Demo01/" + zone.PrefabName);
             yield return async;
             zone.Prefab = GameObject.Instantiate(async.asset) as GameObject;
-            var x = (zone.X / 500 + 1);
-            var y = (zone.Y / 500 + 1);
+            var x = zone.X + 1;
+            var y = zone.Y + 1;
             //Debug.Log("Terrain" + (zone.Y / 500 + 1) + "_" + (zone.X / 500 + 1));
             var terr = zone.Prefab.transform.FindChild("Terrain" + y + "_" + x);
             zone.Terrain = terr.GetComponent<Terrain>();
@@ -153,8 +153,8 @@ public class DynamicScenes : MonoBehaviour
             for (int i = 0; i < m_loadedZones.Count; i++)
             {
                 var loadedZone = m_loadedZones[i];
-                var x = (loadedZone.X / 500);
-                var y = (loadedZone.Y / 500);
+                var x = loadedZone.X;
+                var y = loadedZone.Y;
 
                 Terrain left = GetLoadedTerrain(x - 1, y);
                 Terrain right = GetLoadedTerrain(x + 1, y);
