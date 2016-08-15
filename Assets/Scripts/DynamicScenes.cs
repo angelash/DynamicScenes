@@ -46,17 +46,17 @@ public class DynamicScenes : MonoBehaviour
         mapSectionXNum = 8;
         mapSectionYNum = 8;
         m_sceneData = new SceneData() { Id = 1, Width = 4000, Height = 4000 };
-        m_sceneData.Cells = new ZoneData[mapSectionXNum, mapSectionYNum];
-        for (int i = 0; i < mapSectionXNum; i++)
+        m_sceneData.Cells = new ZoneData[mapSectionYNum, mapSectionXNum];
+        for (int y = 0; y < mapSectionYNum; y++)
         {
-            for (int j = 0; j < mapSectionYNum; j++)
+            for (int x = 0; x < mapSectionXNum; x++)
             {
                 var cell = new ZoneData();
-                cell.X = j;
-                cell.Y = i;
-                cell.PrefabName = string.Format("Demo01_{0}_{1}", i + 1, j + 1);
-                cell.SceneName = string.Format("Demo01_{0}_{1}", i + 1, j + 1);
-                m_sceneData.Cells[i, j] = cell;
+                cell.X = x;
+                cell.Y = y;
+                cell.PrefabName = string.Format("Demo01_{0}_{1}", y + 1, x + 1);
+                cell.SceneName = string.Format("Demo01_{0}_{1}", y + 1, x + 1);
+                m_sceneData.Cells[y, x] = cell;
             }
         }
     }
@@ -103,11 +103,11 @@ public class DynamicScenes : MonoBehaviour
         m_waitForRemove.Clear();
         m_waitForRemove.AddRange(m_loadedZones);
         m_loadedZones.Clear();
-        for (int x = m_startZoneX; x <= m_endZoneX; x++)
+        for (int y = m_startZoneY; y <= m_endZoneY; y++)
         {
-            for (int y = m_startZoneY; y <= m_endZoneY; y++)
+            for (int x = m_startZoneX; x <= m_endZoneX; x++)
             {
-                sb.AppendFormat("{0},{1}; ", x, y);
+                sb.AppendFormat("{0},{1}; ", y, x);
                 var cell = m_sceneData.Cells[y, x];
                 m_waitForRemove.Remove(cell);
                 m_loadedZones.Add(cell);
@@ -156,10 +156,10 @@ public class DynamicScenes : MonoBehaviour
                 var x = loadedZone.X;
                 var y = loadedZone.Y;
 
-                Terrain left = GetLoadedTerrain(x - 1, y);
-                Terrain right = GetLoadedTerrain(x + 1, y);
-                Terrain top = GetLoadedTerrain(x, y + 1);
-                Terrain bottom = GetLoadedTerrain(x, y - 1);
+                Terrain left = GetLoadedTerrain(y, x - 1);
+                Terrain right = GetLoadedTerrain(y, x + 1);
+                Terrain top = GetLoadedTerrain(y + 1, x);
+                Terrain bottom = GetLoadedTerrain(y - 1, x);
 
                 loadedZone.Terrain.SetNeighbors(left, top, right, bottom);
             }
@@ -176,7 +176,7 @@ public class DynamicScenes : MonoBehaviour
         }
     }
 
-    private Terrain GetLoadedTerrain(int x, int y)
+    private Terrain GetLoadedTerrain(int y, int x)
     {
         if ((x >= 0 && x < mapSectionXNum) && (y >= 0 && y < mapSectionYNum))
         {
@@ -194,6 +194,9 @@ public class SceneData
     public int Id { get; set; }
     public float Width { get; set; }
     public float Height { get; set; }
+    /// <summary>
+    /// [y,x]: y: Height; x: width
+    /// </summary>
     public ZoneData[,] Cells;
 }
 
