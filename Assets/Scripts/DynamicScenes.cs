@@ -7,10 +7,13 @@ using UnityEngine.SceneManagement;
 
 public class DynamicScenes : MonoBehaviour
 {
+    private string m_demoName = "Demo02";
+
     private SceneData m_sceneData;
     public Transform m_avatar;
 
-    private int mapCenterWidth, mapCenterHeight, mapSectionXNum, mapSectionYNum;
+    private float m_zoneWidth, m_zoneHeight;
+    private int mapSectionXNum, mapSectionYNum;
 
     private List<ZoneData> m_loadedZones = new List<ZoneData>();
     private List<ZoneData> m_waitForRemove = new List<ZoneData>();
@@ -41,11 +44,13 @@ public class DynamicScenes : MonoBehaviour
 
     void Start()
     {
-        mapCenterWidth = 500;
-        mapCenterHeight = 500;
+        var zoneSize = 62.5f;
+        var mapSize = 500;
+        m_zoneWidth = zoneSize;
+        m_zoneHeight = zoneSize;
         mapSectionXNum = 8;
         mapSectionYNum = 8;
-        m_sceneData = new SceneData() { Id = 1, Width = 4000, Height = 4000 };
+        m_sceneData = new SceneData() { Id = 1, Width = mapSize, Height = mapSize };
         m_sceneData.Cells = new ZoneData[mapSectionYNum, mapSectionXNum];
         for (int y = 0; y < mapSectionYNum; y++)
         {
@@ -54,8 +59,8 @@ public class DynamicScenes : MonoBehaviour
                 var cell = new ZoneData();
                 cell.X = x;
                 cell.Y = y;
-                cell.PrefabName = string.Format("Demo01_{0}_{1}", y + 1, x + 1);
-                cell.SceneName = string.Format("Demo01_{0}_{1}", y + 1, x + 1);
+                cell.PrefabName = string.Format("{2}_{0}_{1}", y + 1, x + 1, m_demoName);
+                cell.SceneName = string.Format("{2}_{0}_{1}", y + 1, x + 1, m_demoName);
                 m_sceneData.Cells[y, x] = cell;
             }
         }
@@ -80,12 +85,12 @@ public class DynamicScenes : MonoBehaviour
         }
         else
         {
-            CenterZoneX = (int)Math.Floor(pos.x / mapCenterWidth);
-            CenterZoneY = (int)Math.Floor(pos.z / mapCenterHeight);
-            currentStartX = CenterZoneX * mapCenterWidth;
-            currentStartY = CenterZoneY * mapCenterHeight;
-            currentEndX = currentStartX + mapCenterWidth;
-            currentEndY = currentStartY + mapCenterHeight;
+            CenterZoneX = (int)Math.Floor(pos.x / m_zoneWidth);
+            CenterZoneY = (int)Math.Floor(pos.z / m_zoneHeight);
+            currentStartX = CenterZoneX * m_zoneWidth;
+            currentStartY = CenterZoneY * m_zoneHeight;
+            currentEndX = currentStartX + m_zoneWidth;
+            currentEndY = currentStartY + m_zoneHeight;
             ChangeMapZones();
 
             Debug.Log(CenterZoneX + " " + CenterZoneY);
@@ -137,7 +142,7 @@ public class DynamicScenes : MonoBehaviour
         {
             yield return SceneManager.LoadSceneAsync(zone.SceneName, LoadSceneMode.Additive);
 
-            var async = Resources.LoadAsync<GameObject>("Demo01/Demo01/" + zone.PrefabName);
+            var async = Resources.LoadAsync<GameObject>(m_demoName + "/" + m_demoName + "/" + zone.PrefabName);
             yield return async;
             zone.Prefab = GameObject.Instantiate(async.asset) as GameObject;
             var x = zone.X + 1;
@@ -195,7 +200,7 @@ public class SceneData
     public float Width { get; set; }
     public float Height { get; set; }
     /// <summary>
-    /// [y,x]: y: Height; x: width
+    /// [y,x]: y: Height; x: Width
     /// </summary>
     public ZoneData[,] Cells;
 }

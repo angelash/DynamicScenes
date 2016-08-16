@@ -28,6 +28,7 @@ public class SceneSlicerWizard : EditorWindow
     private GameObject m_lastScenePrefab;
     private int m_selected;
     private string m_filePath;
+    private float m_scaleInLightmap;
 
     private GameObject m_borderNode;//用来存放分割线
     private List<GameObject> m_cellPrefabList = new List<GameObject>();
@@ -42,6 +43,10 @@ public class SceneSlicerWizard : EditorWindow
         m_scenePrefab = EditorGUILayout.ObjectField("scene prefab", m_scenePrefab, typeof(GameObject), false) as GameObject;
         if (m_lastScenePrefab != m_scenePrefab)
         {
+            var terr = m_scenePrefab.GetComponentInChildren<Terrain>();
+            SerializedObject so = new SerializedObject(terr);
+            m_scaleInLightmap = so.FindProperty("m_ScaleInLightmap").floatValue;
+            Debug.Log("m_scaleInLightmap: " + m_scaleInLightmap);
             m_lastScenePrefab = m_scenePrefab;
             m_filePath = AssetDatabase.GetAssetPath(m_scenePrefab);
             if (!string.IsNullOrEmpty(m_filePath))
@@ -99,6 +104,10 @@ public class SceneSlicerWizard : EditorWindow
             UnloadPrefabs();
         }
         EditorGUILayout.EndHorizontal();
+        if (GUILayout.Button("Set ScaleInLightmap"))
+        {
+            SetScaleInLightmap();
+        }
 
         EditorGUILayout.EndVertical();
         EditorGUILayout.EndScrollView();
@@ -210,6 +219,18 @@ public class SceneSlicerWizard : EditorWindow
                 m_cellSceneList.Add(scene);
         }
         Debug.Log("Loaded Scenes: " + m_cellSceneList.Count);
+    }
+
+    private void SetScaleInLightmap()
+    {
+        for (int i = 0; i < m_cellPrefabList.Count; i++)
+        {
+            var terr = m_cellPrefabList[i].GetComponentInChildren<Terrain>();
+            SerializedObject so = new SerializedObject(terr);
+            so.FindProperty("m_ScaleInLightmap").floatValue = m_scaleInLightmap;
+            so.ApplyModifiedProperties();
+            Debug.Log(terr + ": " + so.FindProperty("m_ScaleInLightmap").floatValue);
+        }
     }
 
     private void SliceScene(GameObject scenePrefab, int dimension)
