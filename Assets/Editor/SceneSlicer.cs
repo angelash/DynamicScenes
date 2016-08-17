@@ -103,6 +103,10 @@ public class SceneSlicerWizard : EditorWindow
         {
             UnloadPrefabs();
         }
+        if (GUILayout.Button("Save Prefabs"))
+        {
+            SavePrefabs();
+        }
         EditorGUILayout.EndHorizontal();
         if (GUILayout.Button("Set ScaleInLightmap"))
         {
@@ -169,6 +173,19 @@ public class SceneSlicerWizard : EditorWindow
         }
         else
             return true;
+    }
+
+    private void SavePrefabs()
+    {
+        foreach (var go in m_cellPrefabList)
+        {
+            var prefabPath = string.Concat(m_filePath, "/", go.name, ".prefab");
+            PrefabUtility.ReplacePrefab(
+                         go,
+                         AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath),
+                         ReplacePrefabOptions.ConnectToPrefab
+                         );
+        }
     }
 
     private void LoadPrefabs()
