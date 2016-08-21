@@ -5,20 +5,24 @@ using UnityEditor.SceneManagement;
 using System.Collections;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.IO;
+using GameLoader.Utils.XML;
+using System.Security;
+using GameLoader.Utils;
 
 public class SceneSlicer
 {
-    [MenuItem("SceneSlicer/SliceScene")]
-    public static void SliceScene()
+    [MenuItem("Slice Map/Slice Map")]
+    public static void SliceMap()
     {
-        var wizard = EditorWindow.GetWindow<SceneSlicerWizard>();
+        var wizard = EditorWindow.GetWindow<SliceMapWizard>();
         wizard.Show();
     }
 }
 
-public class SceneSlicerWizard : EditorWindow
+public class SliceMapWizard : EditorWindow
 {
     private Vector2 m_scrollPos;
     private GameObject m_scenePrefab;
@@ -35,6 +39,8 @@ public class SceneSlicerWizard : EditorWindow
     private List<Scene> m_cellSceneList = new List<Scene>();
     public CtrlSliceTerrain m_ctrl = new CtrlSliceTerrain();
     public bool overwrite = true;
+
+    private const string DATA_DYNAMIC_MAP = "Assets/Resources/data/dynamic_maps/";
 
     private void OnGUI()
     {
@@ -67,7 +73,7 @@ public class SceneSlicerWizard : EditorWindow
             else
             {
                 //var node = GameObject.Instantiate(m_scenePrefab.transform.FindChild("Cacti"));
-                SliceScene(m_scenePrefab, (int)Math.Pow(2, m_selected + 1));
+                SliceMap(m_scenePrefab, GetDimension());
             }
         }
         if (GUILayout.Button("Clean up"))
@@ -103,18 +109,27 @@ public class SceneSlicerWizard : EditorWindow
         {
             UnloadPrefabs();
         }
-        if (GUILayout.Button("Save Prefabs"))
-        {
-            SavePrefabs();
-        }
         EditorGUILayout.EndHorizontal();
         if (GUILayout.Button("Set ScaleInLightmap"))
         {
             SetScaleInLightmap();
         }
+        if (GUILayout.Button("Export Data"))
+        {
+            ExportData(m_scenePrefab, GetDimension());
+        }
+        if (GUILayout.Button("Export lightmap Data"))
+        {
+            ExportLightmapData();
+        }
 
         EditorGUILayout.EndVertical();
         EditorGUILayout.EndScrollView();
+    }
+
+    private int GetDimension()
+    {
+        return (int)Math.Pow(2, m_selected + 1);
     }
 
     //Check for any errors with User Input
@@ -173,19 +188,6 @@ public class SceneSlicerWizard : EditorWindow
         }
         else
             return true;
-    }
-
-    private void SavePrefabs()
-    {
-        foreach (var go in m_cellPrefabList)
-        {
-            var prefabPath = string.Concat(m_filePath, "/", go.name, ".prefab");
-            PrefabUtility.ReplacePrefab(
-                         go,
-                         AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath),
-                         ReplacePrefabOptions.ConnectToPrefab
-                         );
-        }
     }
 
     private void LoadPrefabs()
@@ -250,7 +252,7 @@ public class SceneSlicerWizard : EditorWindow
         }
     }
 
-    private void SliceScene(GameObject scenePrefab, int dimension)
+    private void SliceMap(GameObject scenePrefab, int dimension)
     {
         Debug.Log("dimension " + dimension);
         Terrain sceneTerrain = scenePrefab.GetComponentInChildren<Terrain>();
@@ -265,6 +267,8 @@ public class SceneSlicerWizard : EditorWindow
             if (CheckForErrors())
             {
                 SlicePrefab(scenePrefab, dimension, sceneTerrain);
+                ExportData(scenePrefab, dimension);
+                ExportLightmapData();
             }
             else
                 m_ctrl.createPressed = false;
@@ -304,18 +308,18 @@ public class SceneSlicerWizard : EditorWindow
         m_ctrl.SetNeighbors();
 
         //初始化临时容器
-        for (int i = 0; i < dimension; i++)
+        for (int y = 0; y < dimension; y++)
         {
-            for (int j = 0; j < dimension; j++)
+            for (int x = 0; x < dimension; x++)
             {
-                cellPos[i, j] = new Vector2(startPoint.x + j * cellX, startPoint.z + i * cellZ);
-                cellEndPos[i, j] = new Vector2(startPoint.x + (j + 1) * cellX, startPoint.z + (i + 1) * cellZ);
+                cellPos[y, x] = new Vector2(startPoint.x + x * cellX, startPoint.z + y * cellZ);
+                cellEndPos[y, x] = new Vector2(startPoint.x + (x + 1) * cellX, startPoint.z + (y + 1) * cellZ);
                 var go = new GameObject();
-                go.name = string.Format("{0}_{1}_{2}", scenePrefab.name, i + 1, j + 1);
-                cellPrefab[i, j] = go;
+                go.name = string.Format("{0}_{1}_{2}", scenePrefab.name, y + 1, x + 1);
+                cellPrefab[y, x] = go;
                 m_cellPrefabList.Add(go);
-                cellNodeDic[i, j] = new Dictionary<Transform, Transform>();
-                cellNodeDic[i, j][scenePrefab.transform] = go.transform;
+                cellNodeDic[y, x] = new Dictionary<Transform, Transform>();
+                cellNodeDic[y, x][scenePrefab.transform] = go.transform;
             }
         }
 
@@ -344,31 +348,31 @@ public class SceneSlicerWizard : EditorWindow
 
             //根据规则处理每个节点的复制
             var hasHandle = false;
-            for (int i = 0; i < dimension; i++)
+            for (int y = 0; y < dimension; y++)
             {
                 if (hasHandle)
                     break;
-                for (int j = 0; j < dimension; j++)
+                for (int x = 0; x < dimension; x++)
                 {
                     if (isConstructorNode)//结构节点每个单元格都加上去
                     {
                         var node = GameObject.Instantiate(child);
                         CleanUpNewTran(node, rubbishNode.transform);
                         node.name = child.name;
-                        node.transform.parent = FindCellPrefabParentByTargetTran(child, cellPrefab[i, j].transform, cellNodeDic[i, j]);
+                        node.transform.parent = FindCellPrefabParentByTargetTran(child, cellPrefab[y, x].transform, cellNodeDic[y, x]);
                         CopyTranInfo(child, node);
-                        cellNodeDic[i, j][child] = node;
+                        cellNodeDic[y, x][child] = node;
                     }
                     else
                     {//显示节点需要按照坐标分配
-                        var x = child.position.x;
-                        var z = child.position.z;
-                        if (cellPos[i, j].x < x && x < cellEndPos[i, j].x && cellPos[i, j].y < z && z < cellEndPos[i, j].y)
+                        var childX = child.position.x;
+                        var childY = child.position.z;
+                        if (cellPos[y, x].x < childX && childX < cellEndPos[y, x].x && cellPos[y, x].y < childY && childY < cellEndPos[y, x].y)
                         {
                             var node = GameObject.Instantiate(child);
                             CleanUpNewTran(node, rubbishNode.transform);
                             node.name = child.name;
-                            node.transform.parent = FindCellPrefabParentByTargetTran(child, cellPrefab[i, j].transform, cellNodeDic[i, j]);
+                            node.transform.parent = FindCellPrefabParentByTargetTran(child, cellPrefab[y, x].transform, cellNodeDic[y, x]);
                             CopyTranInfo(child, node);
                             hasHandle = true;
                             break;
@@ -534,6 +538,150 @@ public class SceneSlicerWizard : EditorWindow
             EditorSceneManager.CloseScene(item, true);
         }
         m_cellSceneList.Clear();
+    }
+
+    private void ExportData(GameObject scenePrefab, int dimension)
+    {
+        var list = new List<ZoneData>();
+        for (int y = 0; y < dimension; y++)
+        {
+            for (int x = 0; x < dimension; x++)
+            {
+                var zoneData = new ZoneData();
+                var name = string.Format("{0}_{1}_{2}", scenePrefab.name, y + 1, x + 1);
+                zoneData.X = x;
+                zoneData.Y = y;
+                zoneData.PrefabName = name + ".prefab";
+                zoneData.SceneName = name + ".unity";
+                list.Add(zoneData);
+            }
+        }
+
+        string fileName = string.Concat(DATA_DYNAMIC_MAP, scenePrefab.name, ConstString.XML_SUFFIX);
+        SaveXMLList(fileName, list);
+        AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
+        Debug.Log(fileName + ": " + list.Count);
+    }
+
+    private void ExportLightmapData()
+    {
+        foreach (var item in m_cellPrefabList)
+        {
+            var renderers = item.GetComponentsInChildren<Renderer>();
+            var terr = item.GetComponentInChildren<Terrain>();
+            var lightmapAssetDatas = new List<LightmapAssetData>();
+
+            foreach (var render in renderers)
+            {
+                var lightmapAssetData = new LightmapAssetData();
+                lightmapAssetData.Id = render.name + render.transform.position;
+                lightmapAssetData.Index = render.lightmapIndex;
+                lightmapAssetData.x = render.lightmapScaleOffset.x;
+                lightmapAssetData.y = render.lightmapScaleOffset.y;
+                lightmapAssetData.z = render.lightmapScaleOffset.z;
+                lightmapAssetData.w = render.lightmapScaleOffset.w;
+                lightmapAssetDatas.Add(lightmapAssetData);
+            }
+            var terrLightmapAssetData = new LightmapAssetData();
+            terrLightmapAssetData.Id = terr.name;
+            terrLightmapAssetData.Index = terr.lightmapIndex;
+            lightmapAssetDatas.Add(terrLightmapAssetData);
+
+            string fileName = string.Concat(DATA_DYNAMIC_MAP, "lightmapdata_", item.name, ConstString.XML_SUFFIX);
+            SaveXMLList(fileName, lightmapAssetDatas);
+            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
+            Debug.Log(fileName + ": " + lightmapAssetDatas.Count);
+        }
+    }
+
+    private static List<T> LoadXML<T>(string path)
+    {
+        var text = path.LoadFile();
+        return LoadXMLText<T>(text);
+    }
+
+    private static List<T> LoadXMLText<T>(string text)
+    {
+        List<T> list = new List<T>();
+        try
+        {
+            if (String.IsNullOrEmpty(text))
+            {
+                return list;
+            }
+            Type type = typeof(T);
+            var xml = XMLParser.LoadXML(text);
+            Dictionary<Int32, Dictionary<String, String>> map = XMLParser.LoadIntMap(xml, text);
+            var props = type.GetProperties(~System.Reflection.BindingFlags.Static);
+            foreach (var item in map)
+            {
+                var obj = type.GetConstructor(Type.EmptyTypes).Invoke(null);
+                foreach (var prop in props)
+                {
+                    if (prop.Name == "id")
+                        prop.SetValue(obj, item.Key, null);
+                    else
+                        try
+                        {
+                            if (item.Value.ContainsKey(prop.Name))
+                            {
+                                var value = CommonUtils.GetValue(item.Value[prop.Name], prop.PropertyType);
+                                prop.SetValue(obj, value, null);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            LoggerHelper.Debug("LoadXML error: " + item.Value[prop.Name] + " " + prop.PropertyType);
+                            LoggerHelper.Except(ex);
+                        }
+                }
+                list.Add((T)obj);
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggerHelper.Except(ex);
+            LoggerHelper.Error("error text: \n" + text);
+        }
+        return list;
+    }
+
+    private static void SaveXMLList<T>(string path, List<T> data, string attrName = "record")
+    {
+        var root = new SecurityElement("root");
+        var i = 0;
+        var props = typeof(T).GetProperties();
+        foreach (var item in data)
+        {
+            var xml = new SecurityElement(attrName);
+            foreach (var prop in props)
+            {
+                var type = prop.PropertyType;
+                String result = String.Empty;
+                object obj = prop.GetGetMethod().Invoke(item, null);
+                //var obj = prop.GetValue(item, null);
+                if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Dictionary<,>))
+                {
+                    result = typeof(CommonUtils).GetMethod("PackMap")
+                    .MakeGenericMethod(type.GetGenericArguments())
+                    .Invoke(null, new object[] { obj, ':', ',' }).ToString();
+                }
+                else if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>))
+                {
+                    result = typeof(CommonUtils).GetMethod("PackList")
+                    .MakeGenericMethod(type.GetGenericArguments())
+                    .Invoke(null, new object[] { obj, ',' }).ToString();
+                }
+                else
+                {
+                    result = obj.ToString();
+                }
+                xml.AddChild(new SecurityElement(prop.Name, result));
+            }
+            root.AddChild(xml);
+            i++;
+        }
+        XMLParser.SaveText(path, root.ToString());
     }
 
     private void CleanUpNewTran(Transform node, Transform rubbishNode)
