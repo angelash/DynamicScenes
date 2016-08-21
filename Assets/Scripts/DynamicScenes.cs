@@ -64,7 +64,9 @@ public class DynamicScenes : MonoBehaviour
                 cell.X = x;
                 cell.Y = y;
                 cell.PrefabName = string.Format("{2}_{0}_{1}", y + 1, x + 1, m_demoName);
-                cell.SceneName = string.Format("{2}_{0}_{1}", y + 1, x + 1, m_demoName);
+                //cell.SceneName = string.Format("{2}_{0}_{1}", y + 1, x + 1, m_demoName);
+                string fileName = string.Concat(DATA_DYNAMIC_MAP, "lightmapdata_", cell.PrefabName, ConstString.XML_SUFFIX);
+                cell.LightmapAssetDatas = LoadXML<LightmapAssetData>(fileName);
                 m_sceneData.Cells[y, x] = cell;
             }
         }
@@ -144,7 +146,7 @@ public class DynamicScenes : MonoBehaviour
     {
         if (!zone.Loaded)
         {
-            yield return SceneManager.LoadSceneAsync(zone.SceneName, LoadSceneMode.Additive);
+            //yield return SceneManager.LoadSceneAsync(zone.SceneName, LoadSceneMode.Additive);
 
             var async = Resources.LoadAsync<GameObject>(m_demoName + "/" + m_demoName + "/" + zone.PrefabName);
             yield return async;
@@ -180,7 +182,7 @@ public class DynamicScenes : MonoBehaviour
         if (scene.Loaded)
         {
             GameObject.Destroy(scene.Prefab);
-            SceneManager.UnloadScene(scene.SceneName);
+            //SceneManager.UnloadScene(scene.SceneName);
             scene.Loaded = false;
         }
     }
@@ -268,9 +270,10 @@ public class ZoneObjData
     public int X { get; set; }
     public int Y { get; set; }
     public string PrefabName { get; set; }
-    public string SceneName { get; set; }
+    //public string SceneName { get; set; }
     public bool Loaded { get; set; }
     public GameObject Prefab { get; set; }
-    public Scene Scene { get; set; }
+    public List<LightmapAssetData> LightmapAssetDatas { get; set; }
+    //public Scene Scene { get; set; }
     public Terrain Terrain { get; set; }
 }
