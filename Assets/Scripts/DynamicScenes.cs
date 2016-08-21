@@ -4,9 +4,13 @@ using System.Collections.Generic;
 using System;
 using System.Text;
 using UnityEngine.SceneManagement;
+using GameLoader.Utils;
+using GameLoader.Utils.XML;
 
 public class DynamicScenes : MonoBehaviour
 {
+    private const string DATA_DYNAMIC_MAP = "Assets/Resources/data/dynamic_maps/";
+
     private string m_demoName = "Demo02";
 
     private SceneData m_sceneData;
@@ -15,8 +19,8 @@ public class DynamicScenes : MonoBehaviour
     private float m_zoneWidth, m_zoneHeight;
     private int mapSectionXNum, mapSectionYNum;
 
-    private List<ZoneData> m_loadedZones = new List<ZoneData>();
-    private List<ZoneData> m_waitForRemove = new List<ZoneData>();
+    private List<ZoneObjData> m_loadedZones = new List<ZoneObjData>();
+    private List<ZoneObjData> m_waitForRemove = new List<ZoneObjData>();
 
     private int m_loadCounter;
     private float m_updateCounter;
@@ -51,12 +55,12 @@ public class DynamicScenes : MonoBehaviour
         mapSectionXNum = 8;
         mapSectionYNum = 8;
         m_sceneData = new SceneData() { Id = 1, Width = mapSize, Height = mapSize };
-        m_sceneData.Cells = new ZoneData[mapSectionYNum, mapSectionXNum];
+        m_sceneData.Cells = new ZoneObjData[mapSectionYNum, mapSectionXNum];
         for (int y = 0; y < mapSectionYNum; y++)
         {
             for (int x = 0; x < mapSectionXNum; x++)
             {
-                var cell = new ZoneData();
+                var cell = new ZoneObjData();
                 cell.X = x;
                 cell.Y = y;
                 cell.PrefabName = string.Format("{2}_{0}_{1}", y + 1, x + 1, m_demoName);
@@ -136,7 +140,7 @@ public class DynamicScenes : MonoBehaviour
         }
     }
 
-    private IEnumerator LoadZone(ZoneData zone, int total)
+    private IEnumerator LoadZone(ZoneObjData zone, int total)
     {
         if (!zone.Loaded)
         {
@@ -171,7 +175,7 @@ public class DynamicScenes : MonoBehaviour
         }
     }
 
-    private void UnloadScene(ZoneData scene)
+    private void UnloadScene(ZoneObjData scene)
     {
         if (scene.Loaded)
         {
@@ -192,6 +196,60 @@ public class DynamicScenes : MonoBehaviour
 
         return null;
     }
+
+
+    private static List<T> LoadXML<T>(string path)
+    {
+        var text = path.LoadFile();
+        return LoadXMLText<T>(text);
+    }
+
+    private static List<T> LoadXMLText<T>(string text)
+    {
+        List<T> list = new List<T>();
+        try
+        {
+            if (String.IsNullOrEmpty(text))
+            {
+                return list;
+            }
+            Type type = typeof(T);
+            var xml = XMLParser.LoadXML(text);
+            Dictionary<Int32, Dictionary<String, String>> map = XMLParser.LoadIntMap(xml, text);
+            var props = type.GetProperties(~System.Reflection.BindingFlags.Static);
+            foreach (var item in map)
+            {
+                var obj = type.GetConstructor(Type.EmptyTypes).Invoke(null);
+                foreach (var prop in props)
+                {
+                    if (prop.Name == "id")
+                        prop.SetValue(obj, item.Key, null);
+                    else
+                        try
+                        {
+                            if (item.Value.ContainsKey(prop.Name))
+                            {
+                                var value = CommonUtils.GetValue(item.Value[prop.Name], prop.PropertyType);
+                                prop.SetValue(obj, value, null);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            LoggerHelper.Debug("LoadXML error: " + item.Value[prop.Name] + " " + prop.PropertyType);
+                            LoggerHelper.Except(ex);
+                        }
+                }
+                list.Add((T)obj);
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggerHelper.Except(ex);
+            LoggerHelper.Error("error text: \n" + text);
+        }
+        return list;
+    }
+
 }
 
 public class SceneData
@@ -202,10 +260,10 @@ public class SceneData
     /// <summary>
     /// [y,x]: y: Height; x: Width
     /// </summary>
-    public ZoneData[,] Cells;
+    public ZoneObjData[,] Cells;
 }
 
-public class ZoneData
+public class ZoneObjData
 {
     public int X { get; set; }
     public int Y { get; set; }
