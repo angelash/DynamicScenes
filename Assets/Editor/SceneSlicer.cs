@@ -627,6 +627,10 @@ public class SliceMapWizard : EditorWindow
             terrLightmapAssetData.id = index++;
             terrLightmapAssetData.name = terr.name;
             terrLightmapAssetData.Index = terr.lightmapIndex;
+            terrLightmapAssetData.x = terr.lightmapScaleOffset.x;
+            terrLightmapAssetData.y = terr.lightmapScaleOffset.y;
+            terrLightmapAssetData.z = terr.lightmapScaleOffset.z;
+            terrLightmapAssetData.w = terr.lightmapScaleOffset.w;
             lightmapAssetDatas.Add(terrLightmapAssetData);
 
             string fileName = string.Concat(DATA_DYNAMIC_MAP, "lightmapdata_", item.name, ConstString.XML_SUFFIX);

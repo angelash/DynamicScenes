@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System;
 using System.Text;
+using System.Linq;
 using UnityEngine.SceneManagement;
 using GameLoader.Utils;
 using GameLoader.Utils.XML;
@@ -65,7 +66,7 @@ public class DynamicScenes : MonoBehaviour
         m_zoneHeight = zoneDatas[0].Height;
 
         string fileName = string.Concat(DATA_DYNAMIC_MAP, "lightmapindex_", m_demoName, ConstString.XML_SUFFIX);
-        m_lightmaps = LoadXML<LightmapIndexData>(fileName);
+        m_lightmaps = LoadXML<LightmapIndexData>(fileName).OrderBy(x => x.Index).ToList();
         var lms = new LightmapData[m_lightmaps.Count];
         for (int i = 0; i < m_lightmaps.Count; i++)
         {
@@ -245,6 +246,7 @@ public class DynamicScenes : MonoBehaviour
         }
         var terrLightmapAssetData = GetLightmapAssetData(terr.name, lightmapAssetDatas);
         terr.lightmapIndex = terrLightmapAssetData.Index;
+        terr.lightmapScaleOffset = new Vector4(terrLightmapAssetData.x, terrLightmapAssetData.y, terrLightmapAssetData.z, terrLightmapAssetData.w);
     }
 
     private void LoadLightmap(int index)
