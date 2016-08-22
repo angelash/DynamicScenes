@@ -18,7 +18,7 @@ public class DynamicScenes : MonoBehaviour
     public Transform m_avatar;
 
     private float m_zoneWidth, m_zoneHeight;
-    private int mapSectionXNum, mapSectionYNum;
+    private int m_mapSectionXNum, m_mapSectionYNum;
 
     private List<ZoneObjData> m_loadedZones = new List<ZoneObjData>();
     private List<ZoneObjData> m_waitForRemove = new List<ZoneObjData>();
@@ -56,11 +56,14 @@ public class DynamicScenes : MonoBehaviour
         string lightmapFileName = string.Concat(DATA_DYNAMIC_MAP, m_demoName, ConstString.XML_SUFFIX);
         m_lightmaps = LoadXML<LightmapIndexData>(lightmapFileName);
 
+        m_mapSectionYNum = zoneDatas[0].Y;
+        m_mapSectionXNum = zoneDatas[0].X;
         m_sceneData = new SceneData() { Id = 1 };
-        m_sceneData.Cells = new ZoneObjData[mapSectionYNum, mapSectionXNum];
+        m_sceneData.Cells = new ZoneObjData[m_mapSectionYNum, m_mapSectionXNum];
 
         m_zoneWidth = zoneDatas[0].Width;
         m_zoneHeight = zoneDatas[0].Height;
+        Debug.Log("zoneDatas.Count: " + zoneDatas.Count);
         for (int i = 1; i < zoneDatas.Count; i++)
         {
             var zoneData = zoneDatas[i];
@@ -129,9 +132,9 @@ public class DynamicScenes : MonoBehaviour
     private void ChangeMapZones()
     {
         m_startZoneX = Mathf.Max(CenterZoneX - m_loadRange, 0);
-        m_endZoneX = Mathf.Min(CenterZoneX + m_loadRange, mapSectionXNum - 1);
+        m_endZoneX = Mathf.Min(CenterZoneX + m_loadRange, m_mapSectionXNum - 1);
         m_startZoneY = Mathf.Max(CenterZoneY - m_loadRange, 0);
-        m_endZoneY = Mathf.Min(CenterZoneY + m_loadRange, mapSectionYNum - 1);
+        m_endZoneY = Mathf.Min(CenterZoneY + m_loadRange, m_mapSectionYNum - 1);
 
         var sb = new StringBuilder();
         m_waitForRemove.Clear();
@@ -171,14 +174,16 @@ public class DynamicScenes : MonoBehaviour
         {
             //yield return SceneManager.LoadSceneAsync(zone.SceneName, LoadSceneMode.Additive);
 
-            var async = Resources.LoadAsync<GameObject>(m_demoName + "/" + m_demoName + "/" + zone.PrefabName);
+            var async = Resources.LoadAsync<GameObject>(m_demoName + "/" + m_demoName + "/" + Path.GetFileNameWithoutExtension(zone.PrefabName));
             yield return async;
             zone.Prefab = GameObject.Instantiate(async.asset) as GameObject;
+            zone.Prefab.name = Path.GetFileNameWithoutExtension(zone.PrefabName);
             var x = zone.X + 1;
             var y = zone.Y + 1;
             //Debug.Log("Terrain" + (zone.Y / 500 + 1) + "_" + (zone.X / 500 + 1));
             var terr = zone.Prefab.transform.FindChild("Terrain" + y + "_" + x);
             zone.Terrain = terr.GetComponent<Terrain>();
+            LoadLightmapAsset(zone);
             zone.Loaded = true;
         }
         m_loadCounter++;
@@ -210,36 +215,43 @@ public class DynamicScenes : MonoBehaviour
         }
     }
 
-    private void LoadLightmapAsset(GameObject go)
+    private void LoadLightmapAsset(ZoneObjData zone)
     {
-        string lightmapAssetFileName = string.Concat(DATA_DYNAMIC_MAP, go.name, ConstString.XML_SUFFIX);
+        //string lightmapAssetFileName = string.Concat(DATA_DYNAMIC_MAP, "lightmapdata_", go.name, ConstString.XML_SUFFIX);
+        var lightmapAssetDatas = zone.LightmapAssetDatas;
+        Debug.Log(zone.PrefabName + " " + lightmapAssetDatas.Count);
 
-        return;
-        
-        var renderers = go.GetComponentsInChildren<Renderer>();
-        var terr = go.GetComponentInChildren<Terrain>();
-        var lightmapAssetDatas = new List<LightmapAssetData>();
+        var renderers = zone.Prefab.GetComponentsInChildren<Renderer>();
+        var terr = zone.Terrain;
 
         foreach (var render in renderers)
         {
-            var lightmapAssetData = new LightmapAssetData();
-            lightmapAssetData.id = render.name + render.transform.position;
-            lightmapAssetData.Index = render.lightmapIndex;
-            lightmapAssetData.x = render.lightmapScaleOffset.x;
-            lightmapAssetData.y = render.lightmapScaleOffset.y;
-            lightmapAssetData.z = render.lightmapScaleOffset.z;
-            lightmapAssetData.w = render.lightmapScaleOffset.w;
-            lightmapAssetDatas.Add(lightmapAssetData);
+            var lightmapAssetData = GetLightmapAssetData(render.name + render.transform.position, lightmapAssetDatas);
+            render.lightmapIndex = lightmapAssetData.Index;
+            render.lightmapScaleOffset = new Vector4(lightmapAssetData.x, lightmapAssetData.y, lightmapAssetData.z, lightmapAssetData.w);
         }
-        var terrLightmapAssetData = new LightmapAssetData();
-        terrLightmapAssetData.id = terr.name;
-        terrLightmapAssetData.Index = terr.lightmapIndex;
-        lightmapAssetDatas.Add(terrLightmapAssetData);
+        var terrLightmapAssetData = GetLightmapAssetData(terr.name, lightmapAssetDatas);
+        terr.lightmapIndex = terrLightmapAssetData.Index;
+    }
+
+    private void LoadLightmap(int index)
+    {
+        //if(LightmapSettings.lightmaps)
+    }
+
+    private LightmapAssetData GetLightmapAssetData(string name, List<LightmapAssetData> list)
+    {
+        for (int i = 0; i < list.Count; i++)
+        {
+            if (list[i].name == name)
+                return list[i];
+        }
+        return null;
     }
 
     private Terrain GetLoadedTerrain(int y, int x)
     {
-        if ((x >= 0 && x < mapSectionXNum) && (y >= 0 && y < mapSectionYNum))
+        if ((x >= 0 && x < m_mapSectionXNum) && (y >= 0 && y < m_mapSectionYNum))
         {
             var zone = m_sceneData.Cells[y, x];
             if (zone.Loaded)

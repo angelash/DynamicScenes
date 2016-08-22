@@ -550,7 +550,10 @@ public class SliceMapWizard : EditorWindow
         var zoneSize = new ZoneData();
         var terr = scenePrefab.GetComponentInChildren<Terrain>();
         var sceneSize = terr.terrainData.size;
-
+        var index = 0;
+        zoneSize.id = index++;
+        zoneSize.X = dimension;
+        zoneSize.Y = dimension;
         zoneSize.Width = sceneSize.x / dimension;
         zoneSize.Height = sceneSize.z / dimension;
         list.Add(zoneSize);
@@ -560,6 +563,7 @@ public class SliceMapWizard : EditorWindow
             {
                 var zoneData = new ZoneData();
                 var name = string.Format("{0}_{1}_{2}", scenePrefab.name, y + 1, x + 1);
+                zoneData.id = index++;
                 zoneData.X = x;
                 zoneData.Y = y;
                 zoneData.PrefabName = name + ".prefab";
@@ -575,14 +579,21 @@ public class SliceMapWizard : EditorWindow
 
     private void ExportLightmapIndexData(GameObject scenePrefab)
     {
+        var index = 0;
         var lightmaps = new List<LightmapIndexData>();
         for (int i = 0; i < LightmapSettings.lightmaps.Length; i++)
         {
             var lightmapSetting = LightmapSettings.lightmaps[i];
             var lightmap = new LightmapIndexData();
+            lightmap.id = index++;
             lightmap.Index = i;
+            //Debug.Log(lightmapSetting.lightmapNear);
+            //Debug.Log(lightmapSetting.lightmapFar);
             lightmap.Intensity = AssetDatabase.GetAssetPath(lightmapSetting.lightmapNear);
             lightmap.Directionality = AssetDatabase.GetAssetPath(lightmapSetting.lightmapFar);
+            Debug.Log(lightmap.Intensity);
+            Debug.Log(lightmap.Directionality);
+            lightmaps.Add(lightmap);
         }
 
         string fileName = string.Concat(DATA_DYNAMIC_MAP, "lightmapindex_", scenePrefab.name, ConstString.XML_SUFFIX);
@@ -598,11 +609,13 @@ public class SliceMapWizard : EditorWindow
             var renderers = item.GetComponentsInChildren<Renderer>();
             var terr = item.GetComponentInChildren<Terrain>();
             var lightmapAssetDatas = new List<LightmapAssetData>();
+            var index = 0;
 
             foreach (var render in renderers)
             {
                 var lightmapAssetData = new LightmapAssetData();
-                lightmapAssetData.id = render.name + render.transform.position;
+                lightmapAssetData.id = index++;
+                lightmapAssetData.name = render.name + render.transform.position;
                 lightmapAssetData.Index = render.lightmapIndex;
                 lightmapAssetData.x = render.lightmapScaleOffset.x;
                 lightmapAssetData.y = render.lightmapScaleOffset.y;
@@ -611,7 +624,8 @@ public class SliceMapWizard : EditorWindow
                 lightmapAssetDatas.Add(lightmapAssetData);
             }
             var terrLightmapAssetData = new LightmapAssetData();
-            terrLightmapAssetData.id = terr.name;
+            terrLightmapAssetData.id = index++;
+            terrLightmapAssetData.name = terr.name;
             terrLightmapAssetData.Index = terr.lightmapIndex;
             lightmapAssetDatas.Add(terrLightmapAssetData);
 

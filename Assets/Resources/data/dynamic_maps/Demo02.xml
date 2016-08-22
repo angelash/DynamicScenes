@@ -1,11 +1,13 @@
 <root>
 <record>
-<X>0</X>
-<Y>0</Y>
+<id>0</id>
+<X>2</X>
+<Y>2</Y>
 <Width>250</Width>
 <Height>250</Height>
 </record>
 <record>
+<id>1</id>
 <X>0</X>
 <Y>0</Y>
 <Width>0</Width>
@@ -13,6 +15,7 @@
 <PrefabName>Demo02_1_1.prefab</PrefabName>
 </record>
 <record>
+<id>2</id>
 <X>1</X>
 <Y>0</Y>
 <Width>0</Width>
@@ -20,6 +23,7 @@
 <PrefabName>Demo02_1_2.prefab</PrefabName>
 </record>
 <record>
+<id>3</id>
 <X>0</X>
 <Y>1</Y>
 <Width>0</Width>
@@ -27,6 +31,7 @@
 <PrefabName>Demo02_2_1.prefab</PrefabName>
 </record>
 <record>
+<id>4</id>
 <X>1</X>
 <Y>1</Y>
 <Width>0</Width>
