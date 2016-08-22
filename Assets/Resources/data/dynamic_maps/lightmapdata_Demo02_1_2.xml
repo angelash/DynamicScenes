@@ -164,10 +164,10 @@
 <record>
 <id>18</id>
 <name>Terrain1_2</name>
-<x>0</x>
-<y>0</y>
-<z>0</z>
-<w>0</w>
+<x>0.1240234</x>
+<y>0.1240234</y>
+<z>0.05273438</z>
+<w>0.02684668</w>
 <Index>1</Index>
 </record>
 </root>

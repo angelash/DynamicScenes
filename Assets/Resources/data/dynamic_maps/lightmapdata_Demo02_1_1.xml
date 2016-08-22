@@ -200,10 +200,10 @@
 <record>
 <id>22</id>
 <name>Terrain1_1</name>
-<x>0</x>
-<y>0</y>
+<x>0.1240234</x>
+<y>0.1240234</y>
 <z>0</z>
-<w>0</w>
+<w>0.03514453</w>
 <Index>0</Index>
 </record>
 </root>
