@@ -1,0 +1,154 @@
+<root>
+<record>
+<Id>Cube (2)(354.6, 20.0, 163.2)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (5)(375.6, 20.0, 210.1)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (10)(318.5, 20.0, 210.1)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (13)(297.5, 5.0, 163.2)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (17)(387.2, 5.0, 150.3)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (18)(387.2, 5.0, 48.7)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (21)(408.2, 10.0, 95.6)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (22)(408.2, 10.0, 197.2)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (24)(266.2, 10.0, 197.2)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (25)(465.3, 10.0, 197.2)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (26)(465.3, 10.0, 95.6)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (27)(254.5, 10.0, 95.6)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (29)(444.3, 10.0, 48.7)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (30)(444.3, 10.0, 150.3)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (65)(283.3, 20.0, 154.4)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (66)(283.3, 10.0, 52.4)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (69)(304.3, 10.0, 99.4)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (70)(304.3, 10.0, 201.4)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Terrain1_2</Id>
+<x>0</x>
+<y>0</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+</root>

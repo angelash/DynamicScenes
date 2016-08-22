@@ -1,0 +1,186 @@
+<root>
+<record>
+<Id>Cube (3)(143.8, 20.0, 163.2)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (4)(164.8, 20.0, 210.1)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (11)(107.7, 20.0, 210.1)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (12)(86.7, 5.0, 163.2)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (16)(188.0, 5.0, 150.3)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (19)(176.4, 10.0, 48.7)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (20)(197.4, 10.0, 95.6)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (23)(209.1, 10.0, 197.2)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (28)(233.5, 10.0, 48.7)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (31)(245.2, 10.0, 150.3)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (64)(84.3, 20.0, 154.4)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (67)(72.3, 10.0, 52.4)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (68)(93.3, 10.0, 99.4)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (71)(105.3, 10.0, 201.4)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (72)(47.3, 10.0, 201.4)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (73)(247.3, 10.0, 201.4)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (74)(247.3, 10.0, 99.4)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (75)(36.3, 10.0, 99.4)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (76)(15.3, 10.0, 52.4)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (77)(226.3, 10.0, 52.4)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (78)(226.3, 10.0, 154.4)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Cube (79)(26.3, 10.0, 154.4)</Id>
+<x>1</x>
+<y>1</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+<record>
+<Id>Terrain1_1</Id>
+<x>0</x>
+<y>0</y>
+<z>0</z>
+<w>0</w>
+<Index>-1</Index>
+</record>
+</root>
