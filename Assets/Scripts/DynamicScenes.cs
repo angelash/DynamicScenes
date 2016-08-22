@@ -47,7 +47,7 @@ public class DynamicScenes : MonoBehaviour
         set { m_centerZoneY = value; }
     }
 
-    private List<LightmapIndexData> m_lightmaps = new List<LightmapIndexData>();
+    private List<LightmapIndexData> m_lightmaps;
 
     void Start()
     {
@@ -63,6 +63,18 @@ public class DynamicScenes : MonoBehaviour
 
         m_zoneWidth = zoneDatas[0].Width;
         m_zoneHeight = zoneDatas[0].Height;
+
+        string fileName = string.Concat(DATA_DYNAMIC_MAP, "lightmapindex_", m_demoName, ConstString.XML_SUFFIX);
+        m_lightmaps = LoadXML<LightmapIndexData>(fileName);
+        var lms = new LightmapData[m_lightmaps.Count];
+        for (int i = 0; i < m_lightmaps.Count; i++)
+        {
+            lms[i] = new LightmapData();
+            lms[i].lightmapNear = Resources.Load<Texture2D>(m_lightmaps[i].Intensity);
+            lms[i].lightmapFar = Resources.Load<Texture2D>(m_lightmaps[i].Directionality);
+        }
+        LightmapSettings.lightmaps = lms;
+        Debug.Log("m_lightmaps.Count: " + m_lightmaps.Count);
         Debug.Log("zoneDatas.Count: " + zoneDatas.Count);
         for (int i = 1; i < zoneDatas.Count; i++)
         {
@@ -72,10 +84,11 @@ public class DynamicScenes : MonoBehaviour
             cell.Y = zoneData.Y;
             cell.PrefabName = zoneData.PrefabName;
             //cell.SceneName = string.Format("{2}_{0}_{1}", y + 1, x + 1, m_demoName);
-            string fileName = string.Concat(DATA_DYNAMIC_MAP, "lightmapdata_", Path.GetFileNameWithoutExtension(cell.PrefabName), ConstString.XML_SUFFIX);
+            fileName = string.Concat(DATA_DYNAMIC_MAP, "lightmapdata_", Path.GetFileNameWithoutExtension(cell.PrefabName), ConstString.XML_SUFFIX);
             cell.LightmapAssetDatas = LoadXML<LightmapAssetData>(fileName);
             m_sceneData.Cells[zoneData.Y, zoneData.X] = cell;
         }
+
 
         //var zoneSize = 62.5f;
         //m_zoneWidth = zoneSize;
@@ -236,7 +249,12 @@ public class DynamicScenes : MonoBehaviour
 
     private void LoadLightmap(int index)
     {
-        //if(LightmapSettings.lightmaps)
+        if (LightmapSettings.lightmaps[index] == null)
+        {
+            LightmapSettings.lightmaps[index] = new LightmapData();
+            LightmapSettings.lightmaps[index].lightmapNear = Resources.Load<Texture2D>(m_lightmaps[index].Intensity);
+            LightmapSettings.lightmaps[index].lightmapFar = Resources.Load<Texture2D>(m_lightmaps[index].Directionality);
+        }
     }
 
     private LightmapAssetData GetLightmapAssetData(string name, List<LightmapAssetData> list)

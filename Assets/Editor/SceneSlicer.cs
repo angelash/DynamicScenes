@@ -589,8 +589,8 @@ public class SliceMapWizard : EditorWindow
             lightmap.Index = i;
             //Debug.Log(lightmapSetting.lightmapNear);
             //Debug.Log(lightmapSetting.lightmapFar);
-            lightmap.Intensity = AssetDatabase.GetAssetPath(lightmapSetting.lightmapNear);
-            lightmap.Directionality = AssetDatabase.GetAssetPath(lightmapSetting.lightmapFar);
+            lightmap.Intensity = AssetDatabase.GetAssetPath(lightmapSetting.lightmapNear).ReplaceFirst("Assets/Resources/", "").ReplaceFirst(".exr", "");
+            lightmap.Directionality = AssetDatabase.GetAssetPath(lightmapSetting.lightmapFar).ReplaceFirst("Assets/Resources/", "").ReplaceFirst(".exr", "");
             Debug.Log(lightmap.Intensity);
             Debug.Log(lightmap.Directionality);
             lightmaps.Add(lightmap);
