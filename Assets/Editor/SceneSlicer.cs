@@ -122,6 +122,10 @@ public class SliceMapWizard : EditorWindow
         {
             ExportLightmapData();
         }
+        if (GUILayout.Button("Export lightmap Index Data"))
+        {
+            ExportLightmapIndexData(m_scenePrefab);
+        }
 
         EditorGUILayout.EndVertical();
         EditorGUILayout.EndScrollView();
@@ -543,6 +547,13 @@ public class SliceMapWizard : EditorWindow
     private void ExportData(GameObject scenePrefab, int dimension)
     {
         var list = new List<ZoneData>();
+        var zoneSize = new ZoneData();
+        var terr = scenePrefab.GetComponentInChildren<Terrain>();
+        var sceneSize = terr.terrainData.size;
+
+        zoneSize.Width = sceneSize.x / dimension;
+        zoneSize.Height = sceneSize.z / dimension;
+        list.Add(zoneSize);
         for (int y = 0; y < dimension; y++)
         {
             for (int x = 0; x < dimension; x++)
@@ -552,7 +563,6 @@ public class SliceMapWizard : EditorWindow
                 zoneData.X = x;
                 zoneData.Y = y;
                 zoneData.PrefabName = name + ".prefab";
-                zoneData.SceneName = name + ".unity";
                 list.Add(zoneData);
             }
         }
@@ -561,6 +571,24 @@ public class SliceMapWizard : EditorWindow
         SaveXMLList(fileName, list);
         AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
         Debug.Log(fileName + ": " + list.Count);
+    }
+
+    private void ExportLightmapIndexData(GameObject scenePrefab)
+    {
+        var lightmaps = new List<LightmapIndexData>();
+        for (int i = 0; i < LightmapSettings.lightmaps.Length; i++)
+        {
+            var lightmapSetting = LightmapSettings.lightmaps[i];
+            var lightmap = new LightmapIndexData();
+            lightmap.Index = i;
+            lightmap.Intensity = AssetDatabase.GetAssetPath(lightmapSetting.lightmapNear);
+            lightmap.Directionality = AssetDatabase.GetAssetPath(lightmapSetting.lightmapFar);
+        }
+
+        string fileName = string.Concat(DATA_DYNAMIC_MAP, "lightmapindex_", scenePrefab.name, ConstString.XML_SUFFIX);
+        SaveXMLList(fileName, lightmaps);
+        AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
+        Debug.Log(fileName + ": " + lightmaps.Count);
     }
 
     private void ExportLightmapData()
@@ -574,7 +602,7 @@ public class SliceMapWizard : EditorWindow
             foreach (var render in renderers)
             {
                 var lightmapAssetData = new LightmapAssetData();
-                lightmapAssetData.Id = render.name + render.transform.position;
+                lightmapAssetData.id = render.name + render.transform.position;
                 lightmapAssetData.Index = render.lightmapIndex;
                 lightmapAssetData.x = render.lightmapScaleOffset.x;
                 lightmapAssetData.y = render.lightmapScaleOffset.y;
@@ -583,7 +611,7 @@ public class SliceMapWizard : EditorWindow
                 lightmapAssetDatas.Add(lightmapAssetData);
             }
             var terrLightmapAssetData = new LightmapAssetData();
-            terrLightmapAssetData.Id = terr.name;
+            terrLightmapAssetData.id = terr.name;
             terrLightmapAssetData.Index = terr.lightmapIndex;
             lightmapAssetDatas.Add(terrLightmapAssetData);
 
@@ -659,6 +687,8 @@ public class SliceMapWizard : EditorWindow
                 var type = prop.PropertyType;
                 String result = String.Empty;
                 object obj = prop.GetGetMethod().Invoke(item, null);
+                if (obj == null)
+                    continue;
                 //var obj = prop.GetValue(item, null);
                 if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Dictionary<,>))
                 {

@@ -6,6 +6,7 @@ using System.Text;
 using UnityEngine.SceneManagement;
 using GameLoader.Utils;
 using GameLoader.Utils.XML;
+using System.IO;
 
 public class DynamicScenes : MonoBehaviour
 {
@@ -46,30 +47,52 @@ public class DynamicScenes : MonoBehaviour
         set { m_centerZoneY = value; }
     }
 
+    private List<LightmapIndexData> m_lightmaps = new List<LightmapIndexData>();
+
     void Start()
     {
-        var zoneSize = 62.5f;
-        var mapSize = 500;
-        m_zoneWidth = zoneSize;
-        m_zoneHeight = zoneSize;
-        mapSectionXNum = 8;
-        mapSectionYNum = 8;
-        m_sceneData = new SceneData() { Id = 1, Width = mapSize, Height = mapSize };
+        string zoneFileName = string.Concat(DATA_DYNAMIC_MAP, m_demoName, ConstString.XML_SUFFIX);
+        var zoneDatas = LoadXML<ZoneData>(zoneFileName);
+        string lightmapFileName = string.Concat(DATA_DYNAMIC_MAP, m_demoName, ConstString.XML_SUFFIX);
+        m_lightmaps = LoadXML<LightmapIndexData>(lightmapFileName);
+
+        m_sceneData = new SceneData() { Id = 1 };
         m_sceneData.Cells = new ZoneObjData[mapSectionYNum, mapSectionXNum];
-        for (int y = 0; y < mapSectionYNum; y++)
+
+        m_zoneWidth = zoneDatas[0].Width;
+        m_zoneHeight = zoneDatas[0].Height;
+        for (int i = 1; i < zoneDatas.Count; i++)
         {
-            for (int x = 0; x < mapSectionXNum; x++)
-            {
-                var cell = new ZoneObjData();
-                cell.X = x;
-                cell.Y = y;
-                cell.PrefabName = string.Format("{2}_{0}_{1}", y + 1, x + 1, m_demoName);
-                //cell.SceneName = string.Format("{2}_{0}_{1}", y + 1, x + 1, m_demoName);
-                string fileName = string.Concat(DATA_DYNAMIC_MAP, "lightmapdata_", cell.PrefabName, ConstString.XML_SUFFIX);
-                cell.LightmapAssetDatas = LoadXML<LightmapAssetData>(fileName);
-                m_sceneData.Cells[y, x] = cell;
-            }
+            var zoneData = zoneDatas[i];
+            var cell = new ZoneObjData();
+            cell.X = zoneData.X;
+            cell.Y = zoneData.Y;
+            cell.PrefabName = zoneData.PrefabName;
+            //cell.SceneName = string.Format("{2}_{0}_{1}", y + 1, x + 1, m_demoName);
+            string fileName = string.Concat(DATA_DYNAMIC_MAP, "lightmapdata_", Path.GetFileNameWithoutExtension(cell.PrefabName), ConstString.XML_SUFFIX);
+            cell.LightmapAssetDatas = LoadXML<LightmapAssetData>(fileName);
+            m_sceneData.Cells[zoneData.Y, zoneData.X] = cell;
         }
+
+        //var zoneSize = 62.5f;
+        //m_zoneWidth = zoneSize;
+        //m_zoneHeight = zoneSize;
+        //mapSectionXNum = 8;
+        //mapSectionYNum = 8;
+        //for (int y = 0; y < mapSectionYNum; y++)
+        //{
+        //    for (int x = 0; x < mapSectionXNum; x++)
+        //    {
+        //        var cell = new ZoneObjData();
+        //        cell.X = x;
+        //        cell.Y = y;
+        //        cell.PrefabName = string.Format("{2}_{0}_{1}", y + 1, x + 1, m_demoName);
+        //        //cell.SceneName = string.Format("{2}_{0}_{1}", y + 1, x + 1, m_demoName);
+        //        string fileName = string.Concat(DATA_DYNAMIC_MAP, "lightmapdata_", cell.PrefabName, ConstString.XML_SUFFIX);
+        //        cell.LightmapAssetDatas = LoadXML<LightmapAssetData>(fileName);
+        //        m_sceneData.Cells[y, x] = cell;
+        //    }
+        //}
     }
 
     void Update()
@@ -187,6 +210,33 @@ public class DynamicScenes : MonoBehaviour
         }
     }
 
+    private void LoadLightmapAsset(GameObject go)
+    {
+        string lightmapAssetFileName = string.Concat(DATA_DYNAMIC_MAP, go.name, ConstString.XML_SUFFIX);
+
+        return;
+        
+        var renderers = go.GetComponentsInChildren<Renderer>();
+        var terr = go.GetComponentInChildren<Terrain>();
+        var lightmapAssetDatas = new List<LightmapAssetData>();
+
+        foreach (var render in renderers)
+        {
+            var lightmapAssetData = new LightmapAssetData();
+            lightmapAssetData.id = render.name + render.transform.position;
+            lightmapAssetData.Index = render.lightmapIndex;
+            lightmapAssetData.x = render.lightmapScaleOffset.x;
+            lightmapAssetData.y = render.lightmapScaleOffset.y;
+            lightmapAssetData.z = render.lightmapScaleOffset.z;
+            lightmapAssetData.w = render.lightmapScaleOffset.w;
+            lightmapAssetDatas.Add(lightmapAssetData);
+        }
+        var terrLightmapAssetData = new LightmapAssetData();
+        terrLightmapAssetData.id = terr.name;
+        terrLightmapAssetData.Index = terr.lightmapIndex;
+        lightmapAssetDatas.Add(terrLightmapAssetData);
+    }
+
     private Terrain GetLoadedTerrain(int y, int x)
     {
         if ((x >= 0 && x < mapSectionXNum) && (y >= 0 && y < mapSectionYNum))
@@ -257,8 +307,8 @@ public class DynamicScenes : MonoBehaviour
 public class SceneData
 {
     public int Id { get; set; }
-    public float Width { get; set; }
-    public float Height { get; set; }
+    //public float Width { get; set; }
+    //public float Height { get; set; }
     /// <summary>
     /// [y,x]: y: Height; x: Width
     /// </summary>
