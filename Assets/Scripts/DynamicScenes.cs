@@ -74,7 +74,10 @@ public class DynamicScenes : MonoBehaviour
             lms[i] = new LightmapData();
             lms[i].lightmapNear = Resources.Load<Texture2D>(m_lightmaps[i].Intensity);
             lms[i].lightmapFar = Resources.Load<Texture2D>(m_lightmaps[i].Directionality);
+            Debug.Log(lms[i].lightmapNear);
+            Debug.Log(lms[i].lightmapFar);
         }
+        LightmapSettings.lightmapsMode = LightmapsMode.NonDirectional;
         LightmapSettings.lightmaps = lms;
         Debug.Log("m_lightmaps.Count: " + m_lightmaps.Count);
         Debug.Log("zoneDatas.Count: " + zoneDatas.Count);
@@ -234,31 +237,38 @@ public class DynamicScenes : MonoBehaviour
     {
         //string lightmapAssetFileName = string.Concat(DATA_DYNAMIC_MAP, "lightmapdata_", go.name, ConstString.XML_SUFFIX);
         var lightmapAssetDatas = zone.LightmapAssetDatas;
-        Debug.Log(zone.PrefabName + " " + lightmapAssetDatas.Count);
 
         var renderers = zone.Prefab.GetComponentsInChildren<Renderer>();
+        Debug.Log(zone.PrefabName + " " + lightmapAssetDatas.Count + " " + renderers.Length);
         var terr = zone.Terrain;
 
-        foreach (var render in renderers)
+        try
         {
-            var lightmapAssetData = GetLightmapAssetData(render.name + render.transform.position, lightmapAssetDatas);
-            render.lightmapIndex = lightmapAssetData.Index;
-            render.lightmapScaleOffset = new Vector4(lightmapAssetData.x, lightmapAssetData.y, lightmapAssetData.z, lightmapAssetData.w);
+            foreach (var render in renderers)
+            {
+                var lightmapAssetData = GetLightmapAssetData(render.name + render.transform.position, lightmapAssetDatas);
+                render.lightmapIndex = lightmapAssetData.Index;
+                render.lightmapScaleOffset = new Vector4(lightmapAssetData.x, lightmapAssetData.y, lightmapAssetData.z, lightmapAssetData.w);
+            }
+            var terrLightmapAssetData = GetLightmapAssetData(terr.name, lightmapAssetDatas);
+            terr.lightmapIndex = terrLightmapAssetData.Index;
+            terr.lightmapScaleOffset = new Vector4(terrLightmapAssetData.x, terrLightmapAssetData.y, terrLightmapAssetData.z, terrLightmapAssetData.w);
         }
-        var terrLightmapAssetData = GetLightmapAssetData(terr.name, lightmapAssetDatas);
-        terr.lightmapIndex = terrLightmapAssetData.Index;
-        terr.lightmapScaleOffset = new Vector4(terrLightmapAssetData.x, terrLightmapAssetData.y, terrLightmapAssetData.z, terrLightmapAssetData.w);
+        catch (Exception ex)
+        {
+            Debug.LogException(ex);
+        }
     }
 
-    private void LoadLightmap(int index)
-    {
-        if (LightmapSettings.lightmaps[index] == null)
-        {
-            LightmapSettings.lightmaps[index] = new LightmapData();
-            LightmapSettings.lightmaps[index].lightmapNear = Resources.Load<Texture2D>(m_lightmaps[index].Intensity);
-            LightmapSettings.lightmaps[index].lightmapFar = Resources.Load<Texture2D>(m_lightmaps[index].Directionality);
-        }
-    }
+    //private void LoadLightmap(int index)
+    //{
+    //    if (LightmapSettings.lightmaps[index] == null)
+    //    {
+    //        LightmapSettings.lightmaps[index] = new LightmapData();
+    //        LightmapSettings.lightmaps[index].lightmapNear = Resources.Load<Texture2D>(m_lightmaps[index].Intensity);
+    //        LightmapSettings.lightmaps[index].lightmapFar = Resources.Load<Texture2D>(m_lightmaps[index].Directionality);
+    //    }
+    //}
 
     private LightmapAssetData GetLightmapAssetData(string name, List<LightmapAssetData> list)
     {
