@@ -8,6 +8,7 @@ using UnityEngine.SceneManagement;
 using GameLoader.Utils;
 using GameLoader.Utils.XML;
 using System.IO;
+using GameLoader.IO;
 
 public class DynamicScenes : MonoBehaviour
 {
@@ -284,7 +285,9 @@ public class DynamicScenes : MonoBehaviour
 
     private static List<T> LoadXML<T>(string path)
     {
-        var text = path.LoadFile();
+        var p = path.ReplaceFirst("Assets/Resources/", "").ReplaceFirst(".xml", "");
+        Debug.Log(p);
+        var text = ResLoader.LoadStringFromResource(p);
         return LoadXMLText<T>(text);
     }
 
