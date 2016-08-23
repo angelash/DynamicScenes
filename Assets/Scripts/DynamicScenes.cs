@@ -248,10 +248,12 @@ public class DynamicScenes : MonoBehaviour
             {
                 var lightmapAssetData = GetLightmapAssetData(render.name + render.transform.position, lightmapAssetDatas);
                 render.lightmapIndex = lightmapAssetData.Index;
+                Debug.Log(render.name + " " + render.lightmapIndex);
                 render.lightmapScaleOffset = new Vector4(lightmapAssetData.x, lightmapAssetData.y, lightmapAssetData.z, lightmapAssetData.w);
             }
             var terrLightmapAssetData = GetLightmapAssetData(terr.name, lightmapAssetDatas);
             terr.lightmapIndex = terrLightmapAssetData.Index;
+            Debug.Log(terr.name + " " + terr.lightmapIndex);
             terr.lightmapScaleOffset = new Vector4(terrLightmapAssetData.x, terrLightmapAssetData.y, terrLightmapAssetData.z, terrLightmapAssetData.w);
         }
         catch (Exception ex)
