@@ -198,7 +198,7 @@ public class DynamicScenes : MonoBehaviour
         {
             //yield return SceneManager.LoadSceneAsync(zone.SceneName, LoadSceneMode.Additive);
 
-            var async = Resources.LoadAsync<GameObject>(m_demoName + "/" + m_demoName + "/" + Path.GetFileNameWithoutExtension(zone.PrefabName));
+            var async = Resources.LoadAsync<GameObject>(m_demoName + "/" + m_demoName + "_p/" + Path.GetFileNameWithoutExtension(zone.PrefabName));
             yield return async;
             zone.Prefab = GameObject.Instantiate(async.asset) as GameObject;
             zone.Prefab.name = Path.GetFileNameWithoutExtension(zone.PrefabName);
