@@ -66,19 +66,7 @@ public class DynamicScenes : MonoBehaviour
         m_zoneWidth = zoneDatas[0].Width;
         m_zoneHeight = zoneDatas[0].Height;
 
-        string fileName = string.Concat(DATA_DYNAMIC_MAP, "lightmapindex_", m_demoName, ConstString.XML_SUFFIX);
-        m_lightmaps = LoadXML<LightmapIndexData>(fileName).OrderBy(x => x.Index).ToList();
-        var lms = new LightmapData[m_lightmaps.Count];
-        for (int i = 0; i < m_lightmaps.Count; i++)
-        {
-            lms[i] = new LightmapData();
-            lms[i].lightmapNear = Resources.Load<Texture2D>(m_lightmaps[i].Intensity);
-            lms[i].lightmapFar = Resources.Load<Texture2D>(m_lightmaps[i].Directionality);
-            Debug.Log(lms[i].lightmapNear);
-            Debug.Log(lms[i].lightmapFar);
-        }
-        LightmapSettings.lightmapsMode = LightmapsMode.NonDirectional;
-        LightmapSettings.lightmaps = lms;
+        Invoke("LoadLightmap", 2);
         Debug.Log("m_lightmaps.Count: " + m_lightmaps.Count);
         Debug.Log("zoneDatas.Count: " + zoneDatas.Count);
         for (int i = 1; i < zoneDatas.Count; i++)
@@ -89,7 +77,7 @@ public class DynamicScenes : MonoBehaviour
             cell.Y = zoneData.Y;
             cell.PrefabName = zoneData.PrefabName;
             //cell.SceneName = string.Format("{2}_{0}_{1}", y + 1, x + 1, m_demoName);
-            fileName = string.Concat(DATA_DYNAMIC_MAP, "lightmapdata_", Path.GetFileNameWithoutExtension(cell.PrefabName), ConstString.XML_SUFFIX);
+            var fileName = string.Concat(DATA_DYNAMIC_MAP, "lightmapdata_", Path.GetFileNameWithoutExtension(cell.PrefabName), ConstString.XML_SUFFIX);
             cell.LightmapAssetDatas = LoadXML<LightmapAssetData>(fileName);
             m_sceneData.Cells[zoneData.Y, zoneData.X] = cell;
         }
@@ -114,6 +102,24 @@ public class DynamicScenes : MonoBehaviour
         //        m_sceneData.Cells[y, x] = cell;
         //    }
         //}
+    }
+
+    void LoadLightmap()
+    {
+        string fileName = string.Concat(DATA_DYNAMIC_MAP, "lightmapindex_", m_demoName, ConstString.XML_SUFFIX);
+        m_lightmaps = LoadXML<LightmapIndexData>(fileName).OrderBy(x => x.Index).ToList();
+        var lms = new LightmapData[m_lightmaps.Count];
+        for (int i = 0; i < m_lightmaps.Count; i++)
+        {
+            lms[i] = new LightmapData();
+            lms[i].lightmapNear = Resources.Load<Texture2D>(m_lightmaps[i].Intensity.ReplaceFirst(".exr", ""));
+            lms[i].lightmapFar = Resources.Load<Texture2D>(m_lightmaps[i].Directionality.ReplaceFirst(".exr", ""));
+            Debug.Log(lms[i].lightmapNear);
+            Debug.Log(lms[i].lightmapFar);
+        }
+        LightmapSettings.lightmapsMode = LightmapsMode.NonDirectional;
+        LightmapSettings.lightmaps = lms;
+
     }
 
     void Update()
