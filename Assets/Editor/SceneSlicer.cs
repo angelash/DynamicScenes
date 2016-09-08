@@ -11,6 +11,7 @@ using System.IO;
 using GameLoader.Utils.XML;
 using System.Security;
 using GameLoader.Utils;
+using System.Reflection;
 
 public class SceneSlicer
 {
@@ -26,6 +27,7 @@ public class SliceMapWizard : EditorWindow
 {
     private Vector2 m_scrollPos;
     private GameObject m_scenePrefab;
+    private GameObject m_instanceScenePrefab;
     /// <summary>
     /// 检测scenePrefab字段变动
     /// </summary>
@@ -42,6 +44,22 @@ public class SliceMapWizard : EditorWindow
 
     private const string DATA_DYNAMIC_MAP = "Assets/Resources/data/dynamic_maps/";
 
+    private void OnFocus()
+    {
+        if (m_instanceScenePrefab == null)
+        {
+            var name = EditorSceneManager.GetActiveScene().name;
+            m_instanceScenePrefab = FindGameObject(name);
+
+            if (m_instanceScenePrefab)
+            {
+                var go = PrefabUtility.GetPrefabParent(m_instanceScenePrefab);
+                m_scenePrefab = go as GameObject;
+                Debug.Log(AssetDatabase.GetAssetPath(go));
+            }
+        }
+    }
+
     private void OnGUI()
     {
         m_scrollPos = EditorGUILayout.BeginScrollView(m_scrollPos);
@@ -49,6 +67,7 @@ public class SliceMapWizard : EditorWindow
         m_scenePrefab = EditorGUILayout.ObjectField("scene prefab", m_scenePrefab, typeof(GameObject), false) as GameObject;
         if (m_lastScenePrefab != m_scenePrefab)
         {
+            m_instanceScenePrefab = GameObject.Find(m_scenePrefab.name);
             var terr = m_scenePrefab.GetComponentInChildren<Terrain>();
             SerializedObject so = new SerializedObject(terr);
             m_scaleInLightmap = so.FindProperty("m_ScaleInLightmap").floatValue;
@@ -57,7 +76,7 @@ public class SliceMapWizard : EditorWindow
             m_filePath = AssetDatabase.GetAssetPath(m_scenePrefab);
             if (!string.IsNullOrEmpty(m_filePath))
             {
-                m_filePath = Path.GetDirectoryName(m_filePath) + "/" + m_scenePrefab.name;
+                m_filePath = Path.GetDirectoryName(m_filePath) + "/" + m_scenePrefab.name + "_p";
             }
         }
         m_selected = GUILayout.SelectionGrid(m_selected, new string[] { "2x2", "4x4", "8x8", "16x16", "32x32", "64x64" }, 6);
@@ -78,8 +97,13 @@ public class SliceMapWizard : EditorWindow
         }
         if (GUILayout.Button("Clean up"))
         {
-            CleanUpBorder();
-            CleanUpCellPrefab();
+            if (EditorUtility.DisplayDialog("警告", "确定删除所有切块资源吗?", "是", "否"))
+            {
+                UnloadPrefabs();
+                UnloadScenes();
+                CleanUpBorder();
+                CleanUpCellPrefab();
+            }
         }
         EditorGUILayout.EndHorizontal();
         EditorGUILayout.Separator();
@@ -93,6 +117,11 @@ public class SliceMapWizard : EditorWindow
         }
         EditorGUILayout.Separator();
         EditorGUILayout.BeginHorizontal();
+        if (GUILayout.Button("Load All"))
+        {
+            LoadScenes();
+            LoadPrefabs();
+        }
         if (GUILayout.Button("Load Scenes"))
         {
             LoadScenes();
@@ -109,10 +138,19 @@ public class SliceMapWizard : EditorWindow
         {
             UnloadPrefabs();
         }
+        if (GUILayout.Button("unLoad All"))
+        {
+            UnloadPrefabs();
+            UnloadScenes();
+        }
         EditorGUILayout.EndHorizontal();
         if (GUILayout.Button("Set ScaleInLightmap"))
         {
             SetScaleInLightmap();
+        }
+        if (GUILayout.Button("Bake Lightmap"))
+        {
+            BakeLightmap();
         }
         if (GUILayout.Button("Export Data"))
         {
@@ -122,6 +160,10 @@ public class SliceMapWizard : EditorWindow
         {
             ExportLightmapData();
         }
+        if (GUILayout.Button("Export single lightmap Data"))
+        {
+            ExportSingleLightmapData(m_instanceScenePrefab);
+        }
         if (GUILayout.Button("Export lightmap Index Data"))
         {
             ExportLightmapIndexData(m_scenePrefab);
@@ -129,6 +171,42 @@ public class SliceMapWizard : EditorWindow
 
         EditorGUILayout.EndVertical();
         EditorGUILayout.EndScrollView();
+    }
+
+    private DateTime m_lightmapBakeTimer;
+    private void BakeLightmap()
+    {
+        m_lightmapBakeTimer = DateTime.Now;
+        Lightmapping.BakeAsync();
+        Lightmapping.completed = OnLightmappingBakeComplated;
+    }
+
+    private void OnLightmappingBakeComplated()
+    {
+        if (Lightmapping.giWorkflowMode == Lightmapping.GIWorkflowMode.OnDemand)
+        {
+            Lightmapping.giWorkflowMode = Lightmapping.GIWorkflowMode.Iterative;//打开自动烘焙，在烘焙完成后自动关闭，以解决5.4.0f3烘焙bug
+        }
+        else
+        {
+            Lightmapping.giWorkflowMode = Lightmapping.GIWorkflowMode.OnDemand;
+            var ts = DateTime.Now - m_lightmapBakeTimer;
+
+            EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene());
+            LoadScenes();
+            LoadPrefabs();
+            foreach (var item in m_cellSceneList)
+            {
+                EditorSceneManager.SaveScene(item);
+            }
+
+            Debug.Log("lightmap baking time: " + ts);
+            //刷新一下Scenes,保证导出光照索引没问题
+            UnloadPrefabs();
+            UnloadScenes();
+            LoadScenes();
+            LoadPrefabs();
+        }
     }
 
     private int GetDimension()
@@ -259,6 +337,8 @@ public class SliceMapWizard : EditorWindow
     private void SliceMap(GameObject scenePrefab, int dimension)
     {
         Debug.Log("dimension " + dimension);
+        if (m_instanceScenePrefab)
+            m_instanceScenePrefab.SetActive(true);
         Terrain sceneTerrain = scenePrefab.GetComponentInChildren<Terrain>();
 
         if (sceneTerrain != null)
@@ -272,7 +352,7 @@ public class SliceMapWizard : EditorWindow
             {
                 SlicePrefab(scenePrefab, dimension, sceneTerrain);
                 ExportData(scenePrefab, dimension);
-                ExportLightmapData();
+                //ExportLightmapData();
             }
             else
                 m_ctrl.createPressed = false;
@@ -421,6 +501,9 @@ public class SliceMapWizard : EditorWindow
         {
             GameObject.DestroyImmediate(m_cellPrefabList[i]);
         }
+        EditorSceneManager.SetActiveScene(EditorSceneManager.GetSceneByName(scenePrefab.name));
+        var sp = FindGameObject(scenePrefab.name);
+        sp.SetActive(false);
     }
 
     private void NormalizePrefab(GameObject scenePrefab)
@@ -579,18 +662,21 @@ public class SliceMapWizard : EditorWindow
 
     private void ExportLightmapIndexData(GameObject scenePrefab)
     {
+        Debug.Log(LightmapSettings.lightProbes.name);
+        Debug.Log(LightmapSettings.lightmapsMode);
         var index = 0;
         var lightmaps = new List<LightmapIndexData>();
         for (int i = 0; i < LightmapSettings.lightmaps.Length; i++)
         {
             var lightmapSetting = LightmapSettings.lightmaps[i];
+            var directionality = AssetDatabase.GetAssetPath(lightmapSetting.lightmapFar).ReplaceFirst("Assets/Resources/", "");
+            if (string.IsNullOrEmpty(directionality))
+                continue;
             var lightmap = new LightmapIndexData();
             lightmap.id = index++;
             lightmap.Index = i;
-            //Debug.Log(lightmapSetting.lightmapNear);
-            //Debug.Log(lightmapSetting.lightmapFar);
-            lightmap.Intensity = AssetDatabase.GetAssetPath(lightmapSetting.lightmapNear).ReplaceFirst("Assets/Resources/", "").ReplaceFirst(".exr", "");
-            lightmap.Directionality = AssetDatabase.GetAssetPath(lightmapSetting.lightmapFar).ReplaceFirst("Assets/Resources/", "").ReplaceFirst(".exr", "");
+            lightmap.Directionality = directionality;
+            lightmap.Intensity = AssetDatabase.GetAssetPath(lightmapSetting.lightmapNear).ReplaceFirst("Assets/Resources/", "");
             Debug.Log(lightmap.Intensity);
             Debug.Log(lightmap.Directionality);
             lightmaps.Add(lightmap);
@@ -600,6 +686,14 @@ public class SliceMapWizard : EditorWindow
         SaveXMLList(fileName, lightmaps);
         AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
         Debug.Log(fileName + ": " + lightmaps.Count);
+    }
+
+    private void ExportSingleLightmapData(GameObject scenePrefab)
+    {
+        m_cellPrefabList.Clear();
+        m_cellPrefabList.Add(scenePrefab);
+        ExportLightmapData();
+        m_cellPrefabList.Clear();
     }
 
     private void ExportLightmapData()
@@ -616,7 +710,7 @@ public class SliceMapWizard : EditorWindow
                 var lightmapAssetData = new LightmapAssetData();
                 lightmapAssetData.id = index++;
                 lightmapAssetData.name = render.name + render.transform.position;
-                lightmapAssetData.Index = render.lightmapIndex;
+                lightmapAssetData.Index = render.lightmapIndex == -1 ? 0 : render.lightmapIndex;
                 lightmapAssetData.x = render.lightmapScaleOffset.x;
                 lightmapAssetData.y = render.lightmapScaleOffset.y;
                 lightmapAssetData.z = render.lightmapScaleOffset.z;
@@ -626,7 +720,7 @@ public class SliceMapWizard : EditorWindow
             var terrLightmapAssetData = new LightmapAssetData();
             terrLightmapAssetData.id = index++;
             terrLightmapAssetData.name = terr.name;
-            terrLightmapAssetData.Index = terr.lightmapIndex;
+            terrLightmapAssetData.Index = terr.lightmapIndex == -1 ? 0 : terr.lightmapIndex;
             terrLightmapAssetData.x = terr.lightmapScaleOffset.x;
             terrLightmapAssetData.y = terr.lightmapScaleOffset.y;
             terrLightmapAssetData.z = terr.lightmapScaleOffset.z;
@@ -640,13 +734,26 @@ public class SliceMapWizard : EditorWindow
         }
     }
 
-    private static List<T> LoadXML<T>(string path)
+    private GameObject FindGameObject(string name)
+    {
+        var gos = EditorSceneManager.GetActiveScene().GetRootGameObjects();
+        for (int i = 0; i < gos.Length; i++)//GameObject.Find找不到inactive的GameObject
+        {
+            if (gos[i].name == name)
+            {
+                return gos[i];
+            }
+        }
+        return null;
+    }
+
+    private List<T> LoadXML<T>(string path)
     {
         var text = path.LoadFile();
         return LoadXMLText<T>(text);
     }
 
-    private static List<T> LoadXMLText<T>(string text)
+    private List<T> LoadXMLText<T>(string text)
     {
         List<T> list = new List<T>();
         try
@@ -692,7 +799,7 @@ public class SliceMapWizard : EditorWindow
         return list;
     }
 
-    private static void SaveXMLList<T>(string path, List<T> data, string attrName = "record")
+    private void SaveXMLList<T>(string path, List<T> data, string attrName = "record")
     {
         var root = new SecurityElement("root");
         var i = 0;
